@@ -23,7 +23,9 @@ rl.on('close', () => {
 });
 
 const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd'];
+const REDIRECTION_OPERATORS = ['>', '1>', '2>'];
 
+// Find the executable for the given command name
 const findExecutable = (commandName) => {
   const paths = (process.env.PATH || '').split(path.delimiter);
 
@@ -40,9 +42,7 @@ const findExecutable = (commandName) => {
 
   return null;
 };
-
-const REDIRECTION_OPERATORS = ['>', '1>', '2>'];
-
+// Write the output to the console or a file
 const writeOutput = (message, outputFile) => {
   if (outputFile === null) {
     console.log(message);
@@ -51,13 +51,13 @@ const writeOutput = (message, outputFile) => {
 
   fs.writeFileSync(outputFile, `${message}\n`);
 };
-
+// Create an empty file at the given path
 const createEmptyFile = (filePath) => {
   if (filePath !== null) {
     fs.closeSync(fs.openSync(filePath, 'w'));
   }
 };
-
+// Extract redirection operators from the command arguments
 const extractRedirection = (commandArgs) => {
   const redirections = {
     stdoutFile: null,
@@ -89,7 +89,7 @@ const extractRedirection = (commandArgs) => {
     ...redirections,
   };
 };
-
+// Run an external command with the given path, name, and arguments
 const runExternalCommand = (commandPath, commandName, commandArgs, stdoutFile, stderrFile) => {
   return new Promise((resolve) => {
     const stdout = stdoutFile === null ? 'inherit' : fs.openSync(stdoutFile, 'w');
@@ -115,7 +115,7 @@ const runExternalCommand = (commandPath, commandName, commandArgs, stdoutFile, s
     });
   });
 };
-
+// Parse the command line input into an array of arguments
 const parseCommandLine = (command) => {
   const args = [];
   let currentArg = '';
@@ -178,7 +178,7 @@ const parseCommandLine = (command) => {
 
   return args;
 };
-
+// Handle a single command
 const handleCommand = (commandName, commandArgs, stdoutFile, stderrFile) => {
   switch (commandName) {
     case 'echo':
@@ -210,7 +210,7 @@ const handleCommand = (commandName, commandArgs, stdoutFile, stderrFile) => {
       writeOutput(`${commandName}: command not found`, stderrFile);
   }
 };
-
+// Handle a single line of input from the user
 const handleLine = async (command) => {
   const trimmedCommand = command.trim();
 
@@ -271,13 +271,11 @@ const handleLine = async (command) => {
   await runExternalCommand(executablePath, commandName, commandArgs, stdoutFile, stderrFile);
   prompt();
 };
-
+// Handle each line of input sequentially.
 let pendingCommand = Promise.resolve();
 
-// Read user input and handle commands asynchronously.
 prompt();
 // Handle each line of input sequentially.
 rl.on('line', (command) => {
-  // Wait for the current command to complete before handling the next one.
   pendingCommand = pendingCommand.then(() => handleLine(command));
 });
