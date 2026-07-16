@@ -5,6 +5,7 @@ const { spawn } = require("child_process");
 
 const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd', 'complete'];
 const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
+const completionSpecs = new Map();
 // Get the list of commands from the PATH environment variable
 const getPathCommands = () => {
   const commands = new Set();
@@ -352,12 +353,24 @@ const handleCommand = (commandName, commandArgs, stdoutFile, stdoutMode, stderrF
       process.exit(0);
       break;
     case 'complete':
-      if (commandArgs[0] === '-p' && commandArgs[1] !== undefined) {
-        writeOutput(
-          `complete: ${commandArgs[1]}: no completion specification`,
-          stderrFile,
-          stderrMode,
-        );
+      if (commandArgs[0] === '-C' && commandArgs[1] !== undefined && commandArgs[2] !== undefined) {
+        completionSpecs.set(commandArgs[2], commandArgs[1]);
+      } else if (commandArgs[0] === '-p' && commandArgs[1] !== undefined) {
+        const completerPath = completionSpecs.get(commandArgs[1]);
+
+        if (completerPath !== undefined) {
+          writeOutput(
+            `complete -C '${completerPath}' ${commandArgs[1]}`,
+            stdoutFile,
+            stdoutMode,
+          );
+        } else {
+          writeOutput(
+            `complete: ${commandArgs[1]}: no completion specification`,
+            stderrFile,
+            stderrMode,
+          );
+        }
       }
       break;
     default:
