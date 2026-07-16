@@ -776,7 +776,15 @@ const handleCommand = async (commandName, commandArgs, stdoutFile, stdoutMode, s
 
         if (variableValue === undefined) {
           writeOutput(`declare: ${commandArgs[1]}: not found`, stderrFile, stderrMode);
+        } else {
+          writeOutput(`declare -- ${commandArgs[1]}="${variableValue}"`, stdoutFile, stdoutMode);
         }
+      } else if (commandArgs[0] !== undefined && commandArgs[0].includes('=')) {
+        const separatorIndex = commandArgs[0].indexOf('=');
+        const variableName = commandArgs[0].slice(0, separatorIndex);
+        const variableValue = commandArgs[0].slice(separatorIndex + 1);
+
+        shellVariables.set(variableName, variableValue);
       }
       break;
     default:
