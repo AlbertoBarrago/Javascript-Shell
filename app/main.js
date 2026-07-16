@@ -58,7 +58,10 @@ const completeFromCandidates = (line, replacementStart, prefix, candidates) => {
   if (matches.length === 1) {
     previousCompletionPrefix = null;
     previousCompletionHadMultipleMatches = false;
-    return [[`${lineBeforeReplacement}${matches[0]} `], line];
+    const completedToken = matches[0].endsWith('/')
+      ? matches[0]
+      : `${matches[0]} `;
+    return [[`${lineBeforeReplacement}${completedToken}`], line];
   }
 
   if (matches.length === 0) {
@@ -105,7 +108,18 @@ const getFileCompletionCandidates = (prefix) => {
   try {
     return fs.readdirSync(directoryPath)
       .filter((fileName) => fileName.startsWith(fileNamePrefix))
-      .map((fileName) => `${directoryPrefix}${fileName}`);
+      .map((fileName) => {
+        const fullPath = path.join(directoryPath, fileName);
+        const completedPath = `${directoryPrefix}${fileName}`;
+
+        try {
+          return fs.statSync(fullPath).isDirectory()
+            ? `${completedPath}/`
+            : completedPath;
+        } catch {
+          return completedPath;
+        }
+      });
   } catch {
     return [];
   }
