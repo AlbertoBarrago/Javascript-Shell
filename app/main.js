@@ -59,7 +59,19 @@ const parseCommandLine = (command) => {
   let isInsideSingleQuotes = false;
   let isInsideDoubleQuotes = false;
 
-  for (const char of command) {
+  for (let index = 0; index < command.length; index++) {
+    const char = command[index];
+
+    if (char === '\\' && !isInsideSingleQuotes) {
+      if (index + 1 < command.length) {
+        currentArg += command[index + 1];
+        index++;
+      } else {
+        currentArg += char;
+      }
+      continue;
+    }
+
     if (char === "'" && !isInsideDoubleQuotes) {
       isInsideSingleQuotes = !isInsideSingleQuotes;
       continue;
