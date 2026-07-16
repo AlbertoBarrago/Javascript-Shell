@@ -9,7 +9,7 @@ import { createJobs } from './jobs.js';
 import { createRedirectionFile, writeOutput } from './io.js';
 import { extractRedirection, parseCommandLine, splitPipeline } from './parser.js';
 import { createVariables } from './variables.js';
-import { colorize, supportsColor } from './colors.js';
+import { colorize, stripAnsi, supportsColor } from './colors.js';
 
 const createShell = () => {
   const history = createHistory();
@@ -76,6 +76,52 @@ const createShell = () => {
       rl.setPrompt(buildPrompt());
       rl.prompt();
     }
+  };
+
+  /**
+   * Colorize the command word (first token) of an input line to signal
+   * whether it resolves to a builtin (green), an external executable in PATH
+   * (cyan), or nothing (red). Arguments after the command are left untouched.
+   *
+   * @param {string} line - Raw input line.
+   * @returns {string} The line with the command token colorized.
+   */
+  const highlightCommandLine = (line) => {
+    const match = line.match(/^(\s*)(\S+)([\s\S]*)$/);
+
+    if (match === null) {
+      return line;
+    }
+
+    const [, leadingWhitespace, commandToken, rest] = match;
+    let color;
+
+    if (BUILT_INS.includes(commandToken)) {
+      color = 'green';
+    } else if (executor.findExecutable(commandToken) !== null) {
+      color = 'cyan';
+    } else {
+      color = 'red';
+    }
+
+    return `${leadingWhitespace}${colorize(commandToken, color, true)}${rest}`;
+  };
+
+  /**
+   * Redraw the current input line with the command token colorized, keeping
+   * the cursor at its logical position. Only runs on a color-capable TTY.
+   */
+  const refreshHighlightedLine = () => {
+    if (isReadlineClosed || !supportsColor()) {
+      return;
+    }
+
+    const promptWidth = stripAnsi(rl._prompt).length;
+
+    readline.cursorTo(process.stdout, 0);
+    readline.clearLine(process.stdout, 0);
+    process.stdout.write(`${rl._prompt}${highlightCommandLine(rl.line)}`);
+    readline.cursorTo(process.stdout, promptWidth + rl.cursor);
   };
 
   const handleType = (commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode) => {
@@ -199,6 +245,18 @@ const createShell = () => {
     rl.on('close', () => {
       isReadlineClosed = true;
     });
+
+    if (supportsColor() && process.stdin.isTTY) {
+      process.stdin.on('keypress', (_str, key) => {
+        // Let readline own the rendering for keys that move away from plain
+        // editing (submit and completion), then recolor on the next keystroke.
+        if (key && (key.name === 'return' || key.name === 'enter' || key.name === 'tab')) {
+          return;
+        }
+
+        refreshHighlightedLine();
+      });
+    }
 
     prompt();
 

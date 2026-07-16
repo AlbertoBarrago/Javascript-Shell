@@ -54,7 +54,20 @@ const colorize = (text, colorName, enabled = supportsColor()) => {
   return `${ANSI_CODES[colorName]}${text}${ANSI_CODES.reset}`;
 };
 
+/**
+ * Remove ANSI SGR escape sequences from a string. Useful to measure the
+ * visible width of text that may contain color codes.
+ *
+ * @param {string} text - Text possibly containing ANSI color codes.
+ * @returns {string} The text without ANSI SGR sequences.
+ */
+const stripAnsi = (text) => {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/\x1b\[[0-9;]*m/g, '');
+};
+
 export {
   colorize,
+  stripAnsi,
   supportsColor,
 };
