@@ -261,6 +261,16 @@ const printHistory = (limit, stdoutFile, stdoutMode) => {
     writeOutput(lines.join('\n'), stdoutFile, stdoutMode);
   }
 };
+
+// Append commands from a history file to the in-memory history.
+const readHistoryFile = (historyFilePath) => {
+  const fileContent = fs.readFileSync(historyFilePath, 'utf8');
+  const commands = fileContent
+    .split(/\r?\n/)
+    .filter((command) => command !== '');
+
+  commandHistory.push(...commands);
+};
 // Get the next available job ID for a background job.
 const getNextJobId = () => {
   if (backgroundJobs.length === 0) {
@@ -711,11 +721,15 @@ const handleCommand = async (commandName, commandArgs, stdoutFile, stdoutMode, s
       printJobs(stdoutFile, stdoutMode);
       break;
     case 'history':
-      printHistory(
-        commandArgs[0] === undefined ? null : Number(commandArgs[0]),
-        stdoutFile,
-        stdoutMode,
-      );
+      if (commandArgs[0] === '-r' && commandArgs[1] !== undefined) {
+        readHistoryFile(commandArgs[1]);
+      } else {
+        printHistory(
+          commandArgs[0] === undefined ? null : Number(commandArgs[0]),
+          stdoutFile,
+          stdoutMode,
+        );
+      }
       break;
     default:
       writeOutput(`${commandName}: command not found`, stderrFile, stderrMode);
