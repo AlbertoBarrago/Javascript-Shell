@@ -283,6 +283,14 @@ const reapDoneJobs = (stdoutFile, stdoutMode) => {
     }
   }
 };
+
+// Let pending background job close events update the job table.
+const waitForBackgroundJobEvents = () => {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 10);
+  });
+};
+
 // Create an empty file at the given path
 const createRedirectionFile = (filePath, outputMode) => {
   if (filePath !== null) {
@@ -596,7 +604,7 @@ const parseCommandLine = (command) => {
   return args;
 };
 // Handle a single command
-const handleCommand = (commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode) => {
+const handleCommand = async (commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode) => {
   switch (commandName) {
     case 'echo':
       writeOutput(commandArgs.join(' '), stdoutFile, stdoutMode);
@@ -647,6 +655,7 @@ const handleCommand = (commandName, commandArgs, stdoutFile, stdoutMode, stderrF
       }
       break;
     case 'jobs':
+      await waitForBackgroundJobEvents();
       printJobs(stdoutFile, stdoutMode);
       break;
     default:
@@ -716,7 +725,7 @@ const handleLine = async (command) => {
   }
 
   if (BUILT_INS.includes(commandName)) {
-    handleCommand(commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode);
+    await handleCommand(commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode);
     prompt();
     return;
   }
