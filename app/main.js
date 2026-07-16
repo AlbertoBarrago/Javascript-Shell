@@ -44,6 +44,10 @@ const completeCommand = (line) => {
     return [[`${matches[0]} `], line];
   }
 
+  if (matches.length === 0) {
+    process.stdout.write('\x07');
+  }
+
   return [matches, line];
 };
 
