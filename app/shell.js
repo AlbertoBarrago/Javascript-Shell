@@ -11,6 +11,13 @@ import { extractRedirection, parseCommandLine, splitPipeline } from './parser.js
 import { createVariables } from './variables.js';
 import { colorize, stripAnsi, supportsColor } from './colors.js';
 
+/**
+ * Create the shell: instantiate every subsystem, wire them together and expose
+ * the REPL entry point.
+ *
+ * @returns {{ handleLine: (command: string) => Promise<void>, start: () => void }}
+ *   The shell API.
+ */
 const createShell = () => {
   const history = createHistory();
   const jobs = createJobs(writeOutput);
@@ -124,6 +131,17 @@ const createShell = () => {
     readline.cursorTo(process.stdout, promptWidth + rl.cursor);
   };
 
+  /**
+   * Handle the `type` builtin: report whether the argument is a builtin, an
+   * external executable (with its path), or not found.
+   *
+   * @param {string[]} commandArgs - Arguments to `type`.
+   * @param {string|null} stdoutFile - stdout redirection target, or `null`.
+   * @param {'write'|'append'} stdoutMode - stdout redirection mode.
+   * @param {string|null} stderrFile - stderr redirection target, or `null`.
+   * @param {'write'|'append'} stderrMode - stderr redirection mode.
+   * @returns {void}
+   */
   const handleType = (commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode) => {
     if (commandArgs.length === 0) {
       console.log('type: missing operand');
@@ -144,6 +162,14 @@ const createShell = () => {
     }
   };
 
+  /**
+   * Process one input line end to end: parse, expand variables, then dispatch
+   * to a pipeline, a builtin or an external command, updating the exit status
+   * and redrawing the prompt.
+   *
+   * @param {string} command - The raw input line.
+   * @returns {Promise<void>}
+   */
   const handleLine = async (command) => {
     completion.resetCompletionState();
 
@@ -239,6 +265,12 @@ const createShell = () => {
     prompt();
   };
 
+  /**
+   * Start the REPL: load history, install listeners and render the first
+   * prompt. Input lines are processed strictly in order.
+   *
+   * @returns {void}
+   */
   const start = () => {
     history.loadHistoryFromEnvironment();
 

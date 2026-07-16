@@ -4,7 +4,26 @@ import path from 'node:path';
 
 import { closeFileDescriptor } from './io.js';
 
+/**
+ * Create the command executor: PATH lookup, external command execution and
+ * pipeline handling.
+ *
+ * @param {string[]} builtIns - Names of the shell builtins.
+ * @param {(commandName: string, commandArgs: string[]) => string} getBuiltinOutput
+ *   Callback returning a builtin's captured stdout, used inside pipelines.
+ * @returns {{
+ *   findExecutable: (commandName: string) => string|null,
+ *   runExternalCommand: Function,
+ *   runPipeline: (commands: string[][]) => Promise<void>
+ * }} The executor API.
+ */
 const createExecutor = (builtIns, getBuiltinOutput) => {
+  /**
+   * Resolve a command name to an executable path by scanning `PATH`.
+   *
+   * @param {string} commandName - The command to look up.
+   * @returns {string|null} The absolute path, or `null` if not found.
+   */
   const findExecutable = (commandName) => {
     const paths = (process.env.PATH || '').split(path.delimiter);
 
@@ -22,6 +41,20 @@ const createExecutor = (builtIns, getBuiltinOutput) => {
     return null;
   };
 
+  /**
+   * Spawn an external command, applying stdout/stderr redirection.
+   *
+   * @param {string} commandPath - Absolute path to the executable.
+   * @param {string} commandName - Name to expose as argv0.
+   * @param {string[]} commandArgs - Arguments passed to the command.
+   * @param {string|null} stdoutFile - stdout redirection target, or `null`.
+   * @param {'write'|'append'} stdoutMode - stdout redirection mode.
+   * @param {string|null} stderrFile - stderr redirection target, or `null`.
+   * @param {'write'|'append'} stderrMode - stderr redirection mode.
+   * @param {boolean} isBackground - Whether to run detached in the background.
+   * @returns {Promise<import('node:child_process').ChildProcess|{exitCode: number}>}
+   *   The child process when backgrounded, otherwise the foreground exit code.
+   */
   const runExternalCommand = (
     commandPath,
     commandName,
@@ -62,6 +95,15 @@ const createExecutor = (builtIns, getBuiltinOutput) => {
     });
   };
 
+  /**
+   * Run a single pipeline stage and capture its stdout as a string. Used for
+   * pipelines that contain at least one builtin, where OS-level piping is not
+   * possible.
+   *
+   * @param {string[]} command - The command tokens for this stage.
+   * @param {string} input - stdin content produced by the previous stage.
+   * @returns {Promise<string>} The captured stdout.
+   */
   const collectCommandOutput = (command, input) => {
     return new Promise((resolve) => {
       const commandName = command[0];
@@ -106,6 +148,13 @@ const createExecutor = (builtIns, getBuiltinOutput) => {
     });
   };
 
+  /**
+   * Run a pipeline made entirely of external commands, wiring each child's
+   * stdout to the next child's stdin with real OS pipes.
+   *
+   * @param {string[][]} commands - One token array per pipeline stage.
+   * @returns {Promise<void>} Resolves when the last stage exits.
+   */
   const runExternalPipeline = (commands) => {
     return new Promise((resolve) => {
       const commandPaths = [];
@@ -165,6 +214,13 @@ const createExecutor = (builtIns, getBuiltinOutput) => {
     });
   };
 
+  /**
+   * Run a pipeline, choosing the all-external streaming strategy or the
+   * builtin-aware string-buffering strategy depending on the stages.
+   *
+   * @param {string[][]} commands - One token array per pipeline stage.
+   * @returns {Promise<void>} Resolves when the pipeline completes.
+   */
   const runPipeline = (commands) => {
     return new Promise(async (resolve) => {
       const hasBuiltin = commands.some((command) => builtIns.includes(command[0]));

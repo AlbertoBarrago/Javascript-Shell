@@ -1,5 +1,13 @@
 import { REDIRECTION_OPERATORS } from './constants.js';
 
+/**
+ * Tokenize a command line into arguments, honoring single/double quotes,
+ * backslash escaping, whitespace splitting, redirection operators (`>`, `>>`
+ * with optional `1`/`2` fd prefixes) and the pipe symbol.
+ *
+ * @param {string} command - The raw command line.
+ * @returns {string[]} The parsed tokens (arguments and operators).
+ */
 const parseCommandLine = (command) => {
   const args = [];
   let currentArg = '';
@@ -81,6 +89,18 @@ const parseCommandLine = (command) => {
   return args;
 };
 
+/**
+ * Split redirection operators and their target files out of a token list.
+ *
+ * @param {string[]} commandArgs - Tokens following the command name.
+ * @returns {{
+ *   args: string[],
+ *   stdoutFile: string|null,
+ *   stdoutMode: 'write'|'append',
+ *   stderrFile: string|null,
+ *   stderrMode: 'write'|'append'
+ * }} The remaining arguments and the resolved redirection targets.
+ */
 const extractRedirection = (commandArgs) => {
   const redirections = {
     stdoutFile: null,
@@ -118,6 +138,13 @@ const extractRedirection = (commandArgs) => {
   };
 };
 
+/**
+ * Split a token list on the pipe operator into per-command token arrays.
+ *
+ * @param {string[]} args - The full token list.
+ * @returns {string[][]|null} One token array per pipeline stage, or `null`
+ *   when the line contains no pipe.
+ */
 const splitPipeline = (args) => {
   const pipeIndex = args.indexOf('|');
 

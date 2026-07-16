@@ -1,5 +1,15 @@
 import { writeOutput } from './io.js';
 
+/**
+ * Create the builtin command handlers. Collaborators are injected so builtins
+ * stay decoupled from the history, jobs, variables and completion subsystems.
+ *
+ * @param {object} deps - Injected collaborators.
+ * @returns {{
+ *   getBuiltinOutput: (commandName: string, commandArgs: string[]) => string,
+ *   handleCommand: Function
+ * }} The builtin API.
+ */
 const createBuiltins = ({
   appendHistoryFile,
   backgroundJobs,
@@ -52,6 +62,13 @@ const createBuiltins = ({
     return true;
   };
 
+  /**
+   * Produce a builtin's output as a string, for use inside pipelines.
+   *
+   * @param {string} commandName - The builtin name.
+   * @param {string[]} commandArgs - The builtin arguments.
+   * @returns {string} The captured output (empty for builtins without stdout).
+   */
   const getBuiltinOutput = (commandName, commandArgs) => {
     switch (commandName) {
       case 'echo':
@@ -76,6 +93,17 @@ const createBuiltins = ({
     }
   };
 
+  /**
+   * Execute a builtin command, honoring stdout/stderr redirection.
+   *
+   * @param {string} commandName - The builtin name.
+   * @param {string[]} commandArgs - The builtin arguments.
+   * @param {string|null} stdoutFile - stdout redirection target, or `null`.
+   * @param {'write'|'append'} stdoutMode - stdout redirection mode.
+   * @param {string|null} stderrFile - stderr redirection target, or `null`.
+   * @param {'write'|'append'} stderrMode - stderr redirection mode.
+   * @returns {Promise<void>}
+   */
   const handleCommand = async (commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode) => {
     if (commandName !== 'exit') {
       exitWarningShown = false;
