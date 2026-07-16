@@ -23,7 +23,7 @@ rl.on('close', () => {
 });
 
 const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd'];
-const REDIRECTION_OPERATORS = ['>', '1>', '2>'];
+const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
 
 // Find the executable for the given command name
 const findExecutable = (commandName) => {
@@ -43,25 +43,29 @@ const findExecutable = (commandName) => {
   return null;
 };
 // Write the output to the console or a file
-const writeOutput = (message, outputFile) => {
+const writeOutput = (message, outputFile, outputMode = 'write') => {
   if (outputFile === null) {
     console.log(message);
     return;
   }
 
-  fs.writeFileSync(outputFile, `${message}\n`);
+  fs.writeFileSync(outputFile, `${message}\n`, {
+    flag: outputMode === 'append' ? 'a' : 'w',
+  });
 };
 // Create an empty file at the given path
-const createEmptyFile = (filePath) => {
+const createRedirectionFile = (filePath, outputMode) => {
   if (filePath !== null) {
-    fs.closeSync(fs.openSync(filePath, 'w'));
+    fs.closeSync(fs.openSync(filePath, outputMode === 'append' ? 'a' : 'w'));
   }
 };
 // Extract redirection operators from the command arguments
 const extractRedirection = (commandArgs) => {
   const redirections = {
     stdoutFile: null,
+    stdoutMode: 'write',
     stderrFile: null,
+    stderrMode: 'write',
   };
   const args = [];
 
@@ -70,11 +74,14 @@ const extractRedirection = (commandArgs) => {
 
     if (REDIRECTION_OPERATORS.includes(arg)) {
       const targetFile = commandArgs[index + 1] || null;
+      const outputMode = arg.endsWith('>>') ? 'append' : 'write';
 
-      if (arg === '2>') {
+      if (arg === '2>' || arg === '2>>') {
         redirections.stderrFile = targetFile;
+        redirections.stderrMode = outputMode;
       } else {
         redirections.stdoutFile = targetFile;
+        redirections.stdoutMode = outputMode;
       }
 
       index++;
@@ -90,10 +97,14 @@ const extractRedirection = (commandArgs) => {
   };
 };
 // Run an external command with the given path, name, and arguments
-const runExternalCommand = (commandPath, commandName, commandArgs, stdoutFile, stderrFile) => {
+const runExternalCommand = (commandPath, commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode) => {
   return new Promise((resolve) => {
-    const stdout = stdoutFile === null ? 'inherit' : fs.openSync(stdoutFile, 'w');
-    const stderr = stderrFile === null ? 'inherit' : fs.openSync(stderrFile, 'w');
+    const stdout = stdoutFile === null
+      ? 'inherit'
+      : fs.openSync(stdoutFile, stdoutMode === 'append' ? 'a' : 'w');
+    const stderr = stderrFile === null
+      ? 'inherit'
+      : fs.openSync(stderrFile, stderrMode === 'append' ? 'a' : 'w');
     const stdio = ['inherit', stdout, stderr];
 
     const child = spawn(commandPath, commandArgs, {
@@ -154,9 +165,14 @@ const parseCommandLine = (command) => {
     }
 
     if (char === '>' && !isInsideSingleQuotes && !isInsideDoubleQuotes) {
+      const isAppendRedirection = command[index + 1] === '>';
+
       if (currentArg === '1' || currentArg === '2') {
-        args.push(`${currentArg}>`);
+        args.push(`${currentArg}${isAppendRedirection ? '>>' : '>'}`);
         currentArg = '';
+        if (isAppendRedirection) {
+          index++;
+        }
         continue;
       }
 
@@ -165,7 +181,10 @@ const parseCommandLine = (command) => {
         currentArg = '';
       }
 
-      args.push(char);
+      args.push(isAppendRedirection ? '>>' : '>');
+      if (isAppendRedirection) {
+        index++;
+      }
       continue;
     }
 
@@ -179,10 +198,10 @@ const parseCommandLine = (command) => {
   return args;
 };
 // Handle a single command
-const handleCommand = (commandName, commandArgs, stdoutFile, stderrFile) => {
+const handleCommand = (commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode) => {
   switch (commandName) {
     case 'echo':
-      writeOutput(commandArgs.join(' '), stdoutFile);
+      writeOutput(commandArgs.join(' '), stdoutFile, stdoutMode);
       break;
     case 'cd':
       if (commandArgs.length === 0) {
@@ -201,13 +220,13 @@ const handleCommand = (commandName, commandArgs, stdoutFile, stderrFile) => {
       }
       break;
     case 'pwd':
-      writeOutput(process.cwd(), stdoutFile);
+      writeOutput(process.cwd(), stdoutFile, stdoutMode);
       break;
     case 'exit':
       process.exit(0);
       break;
     default:
-      writeOutput(`${commandName}: command not found`, stderrFile);
+      writeOutput(`${commandName}: command not found`, stderrFile, stderrMode);
   }
 };
 // Handle a single line of input from the user
@@ -224,11 +243,13 @@ const handleLine = async (command) => {
   const {
     args: commandArgs,
     stdoutFile,
+    stdoutMode,
     stderrFile,
+    stderrMode,
   } = extractRedirection(args.slice(1));
 
-  createEmptyFile(stdoutFile);
-  createEmptyFile(stderrFile);
+  createRedirectionFile(stdoutFile, stdoutMode);
+  createRedirectionFile(stderrFile, stderrMode);
 
   if (commandName === 'type') {
     if (commandArgs.length === 0) {
@@ -237,7 +258,7 @@ const handleLine = async (command) => {
       return;
     }
     if (BUILT_INS.includes(commandArgs[0])) {
-      writeOutput(`${commandArgs[0]} is a shell builtin`, stdoutFile);
+      writeOutput(`${commandArgs[0]} is a shell builtin`, stdoutFile, stdoutMode);
       prompt();
       return;
     }
@@ -245,9 +266,9 @@ const handleLine = async (command) => {
     const executablePath = findExecutable(commandArgs[0]);
 
     if (executablePath === null) {
-      writeOutput(`${commandArgs[0]}: not found`, stderrFile);
+      writeOutput(`${commandArgs[0]}: not found`, stderrFile, stderrMode);
     } else {
-      writeOutput(`${commandArgs[0]} is ${executablePath}`, stdoutFile);
+      writeOutput(`${commandArgs[0]} is ${executablePath}`, stdoutFile, stdoutMode);
     }
 
     prompt();
@@ -255,7 +276,7 @@ const handleLine = async (command) => {
   }
 
   if (BUILT_INS.includes(commandName)) {
-    handleCommand(commandName, commandArgs, stdoutFile, stderrFile);
+    handleCommand(commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode);
     prompt();
     return;
   }
@@ -263,12 +284,20 @@ const handleLine = async (command) => {
   const executablePath = findExecutable(commandName);
 
   if (executablePath === null) {
-    writeOutput(`${commandName}: command not found`, stderrFile);
+    writeOutput(`${commandName}: command not found`, stderrFile, stderrMode);
     prompt();
     return;
   }
 
-  await runExternalCommand(executablePath, commandName, commandArgs, stdoutFile, stderrFile);
+  await runExternalCommand(
+    executablePath,
+    commandName,
+    commandArgs,
+    stdoutFile,
+    stdoutMode,
+    stderrFile,
+    stderrMode,
+  );
   prompt();
 };
 // Handle each line of input sequentially.
