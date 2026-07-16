@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
 
-const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd'];
+const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd', 'complete'];
 const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
 // Get the list of commands from the PATH environment variable
 const getPathCommands = () => {
@@ -351,6 +351,8 @@ const handleCommand = (commandName, commandArgs, stdoutFile, stdoutMode, stderrF
       break;
     case 'exit':
       process.exit(0);
+      break;
+    case 'complete':
       break;
     default:
       writeOutput(`${commandName}: command not found`, stderrFile, stderrMode);
