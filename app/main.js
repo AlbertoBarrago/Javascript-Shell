@@ -126,14 +126,14 @@ const getFileCompletionCandidates = (prefix) => {
   }
 };
 
-const getRegisteredCompletionCandidates = (commandName) => {
+const getRegisteredCompletionCandidates = (commandName, currentWord, previousWord) => {
   const completerPath = completionSpecs.get(commandName);
 
   if (completerPath === undefined) {
     return null;
   }
 
-  const result = spawnSync(completerPath, {
+  const result = spawnSync(completerPath, [commandName, currentWord, previousWord], {
     encoding: 'utf8',
   });
 
@@ -158,7 +158,9 @@ const completeCommand = (line) => {
 
   const commandName = line.slice(0, line.indexOf(' '));
   const prefix = line.slice(lastSpaceIndex + 1);
-  const registeredCandidates = getRegisteredCompletionCandidates(commandName);
+  const words = line.split(' ');
+  const previousWord = words.length >= 2 ? words[words.length - 2] : '';
+  const registeredCandidates = getRegisteredCompletionCandidates(commandName, prefix, previousWord);
 
   if (registeredCandidates !== null) {
     return completeFromCandidates(line, lastSpaceIndex + 1, prefix, registeredCandidates);
