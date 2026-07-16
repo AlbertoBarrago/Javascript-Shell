@@ -189,6 +189,7 @@ const rl = readline.createInterface({
 // Prompt the user for input.
 const prompt = () => {
   if (!isReadlineClosed) {
+    reapDoneJobs(null, 'write');
     rl.prompt();
   }
 };
@@ -234,6 +235,35 @@ const printJobs = (stdoutFile, stdoutMode) => {
         : ' ';
     const command = job.status === 'Running' ? `${job.command} &` : job.command;
     lines.push(`[${job.id}]${marker}  ${job.status.padEnd(24, ' ')}${command}`);
+  }
+
+  if (lines.length > 0) {
+    writeOutput(lines.join('\n'), stdoutFile, stdoutMode);
+  }
+
+  for (let index = backgroundJobs.length - 1; index >= 0; index--) {
+    if (backgroundJobs[index].status === 'Done') {
+      backgroundJobs.splice(index, 1);
+    }
+  }
+};
+
+const reapDoneJobs = (stdoutFile, stdoutMode) => {
+  const mostRecentJobIndex = backgroundJobs.length - 1;
+  const previousJobIndex = backgroundJobs.length - 2;
+  const lines = [];
+
+  for (const [index, job] of backgroundJobs.entries()) {
+    if (job.status !== 'Done') {
+      continue;
+    }
+
+    const marker = index === mostRecentJobIndex
+      ? '+'
+      : index === previousJobIndex
+        ? '-'
+        : ' ';
+    lines.push(`[${job.id}]${marker}  ${job.status.padEnd(24, ' ')}${job.command}`);
   }
 
   if (lines.length > 0) {
