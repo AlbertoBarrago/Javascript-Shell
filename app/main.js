@@ -1,7 +1,7 @@
 const readline = require("readline");
 const fs = require("fs");
 const path = require("path");
-const { spawn } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 
 const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd', 'complete'];
 const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
@@ -125,6 +125,28 @@ const getFileCompletionCandidates = (prefix) => {
     return [];
   }
 };
+
+const getRegisteredCompletionCandidates = (commandName) => {
+  const completerPath = completionSpecs.get(commandName);
+
+  if (completerPath === undefined) {
+    return null;
+  }
+
+  const result = spawnSync(completerPath, {
+    encoding: 'utf8',
+  });
+
+  if (result.error) {
+    return [];
+  }
+
+  return result.stdout
+    .split('\n')
+    .map((candidate) => candidate.trim())
+    .filter((candidate) => candidate !== '');
+};
+
 // Handle tab completion for commands
 const completeCommand = (line) => {
   const lastSpaceIndex = line.lastIndexOf(' ');
@@ -134,7 +156,14 @@ const completeCommand = (line) => {
     return completeFromCandidates(line, 0, line, candidates);
   }
 
+  const commandName = line.slice(0, line.indexOf(' '));
   const prefix = line.slice(lastSpaceIndex + 1);
+  const registeredCandidates = getRegisteredCompletionCandidates(commandName);
+
+  if (registeredCandidates !== null) {
+    return completeFromCandidates(line, lastSpaceIndex + 1, prefix, registeredCandidates);
+  }
+
   const candidates = getFileCompletionCandidates(prefix);
 
   return completeFromCandidates(line, lastSpaceIndex + 1, prefix, candidates);
