@@ -32,15 +32,8 @@ rl.on('line', (command) => {
     rl.prompt();
     return;
   }
-  if (commandName === 'echo') {
-    console.log(commandArgs.join(' '));
-  }
-  if (commandName === 'cd') {
-    if (commandArgs.length === 0) {
-      console.log('cd: missing operand');
-    } else {
-      process.chdir(commandArgs[0]);
-    }
+  if (commandName === 'exit') {
+    process.exit(0);
   }
   rl.prompt();
 })
