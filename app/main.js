@@ -12,7 +12,7 @@ rl.prompt();
 rl.on('line', (command) => {
   const args = command.trim().split(/\s+/);
   if (!VALID_COMMANDS.includes(args[0])) {
-    console.log(`Unknown command: ${args[0]}`);
+    console.log(`${args[0]} command not found`);
     rl.prompt();
     return;
   }
