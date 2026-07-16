@@ -15,11 +15,9 @@ rl.on('line', (command) => {
     console.log(`${args[0]}: command not found`);
     rl.prompt();
     return;
-  }
-  if (VALID_COMMANDS.includes(args[0])) {
+  } else {
     console.log(`${args[0]} is a shell builtin`)
     rl.prompt();
     return;
   }
-  rl.prompt();
 })
