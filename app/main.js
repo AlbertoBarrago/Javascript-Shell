@@ -114,27 +114,19 @@ const completeCommand = (line) => {
 
   return completeFromCandidates(line, lastSpaceIndex + 1, prefix, candidates);
 };
-
+//
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
   prompt: "$ ",
   completer: completeCommand,
 });
-
-let isReadlineClosed = false;
-
 // Prompt the user for input.
 const prompt = () => {
   if (!isReadlineClosed) {
     rl.prompt();
   }
 };
-
-rl.on('close', () => {
-  isReadlineClosed = true;
-});
-
 // Find the executable for the given command name
 const findExecutable = (commandName) => {
   const paths = (process.env.PATH || '').split(path.delimiter);
@@ -415,7 +407,12 @@ const handleLine = async (command) => {
 };
 // Handle each line of input sequentially.
 let pendingCommand = Promise.resolve();
-
+// Flag to indicate whether the readline interface is closed.
+let isReadlineClosed = false;
+// Set the isReadlineClosed flag when the readline interface is closed.
+rl.on('close', () => {
+  isReadlineClosed = true;
+});
 prompt();
 // Handle each line of input sequentially.
 rl.on('line', (command) => {
