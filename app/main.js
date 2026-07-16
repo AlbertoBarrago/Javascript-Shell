@@ -32,6 +32,23 @@ const getPathCommands = () => {
 
 let previousCompletionPrefix = null;
 let previousCompletionHadMultipleMatches = false;
+
+const findLongestCommonPrefix = (values) => {
+  if (values.length === 0) {
+    return '';
+  }
+
+  let prefix = values[0];
+
+  for (const value of values.slice(1)) {
+    while (!value.startsWith(prefix)) {
+      prefix = prefix.slice(0, -1);
+    }
+  }
+
+  return prefix;
+};
+
 // Handle tab completion for commands
 const completeCommand = (line) => {
   if (line.includes(' ')) {
@@ -56,6 +73,14 @@ const completeCommand = (line) => {
     previousCompletionHadMultipleMatches = false;
     process.stdout.write('\x07');
     return [[], line];
+  }
+
+  const commonPrefix = findLongestCommonPrefix(matches);
+
+  if (commonPrefix.length > line.length) {
+    previousCompletionPrefix = null;
+    previousCompletionHadMultipleMatches = false;
+    return [[commonPrefix], line];
   }
 
   if (
