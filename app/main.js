@@ -7,7 +7,6 @@ const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd', 'complete', 'jobs'];
 const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
 const completionSpecs = new Map();
 const backgroundJobs = [];
-let nextJobId = 1;
 
 // Tracks the previous completion prefix and whether it had multiple matches.
 let previousCompletionPrefix = null;
@@ -246,6 +245,14 @@ const printJobs = (stdoutFile, stdoutMode) => {
       backgroundJobs.splice(index, 1);
     }
   }
+};
+
+const getNextJobId = () => {
+  if (backgroundJobs.length === 0) {
+    return 1;
+  }
+
+  return Math.max(...backgroundJobs.map((job) => job.id)) + 1;
 };
 
 const reapDoneJobs = (stdoutFile, stdoutMode) => {
@@ -576,7 +583,7 @@ const handleLine = async (command) => {
 
   if (isBackground) {
     const job = {
-      id: nextJobId,
+      id: getNextJobId(),
       pid: child.pid,
       command: [commandName, ...commandArgs].join(' '),
       status: 'Running',
@@ -588,7 +595,6 @@ const handleLine = async (command) => {
 
     backgroundJobs.push(job);
     console.log(`[${job.id}] ${job.pid}`);
-    nextJobId++;
   }
 
   prompt();
