@@ -286,6 +286,10 @@ const appendHistoryFile = (historyFilePath) => {
 
   lastHistoryAppendIndex = commandHistory.length;
 };
+// Check whether a shell variable name is a valid identifier.
+const isValidShellIdentifier = (variableName) => {
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(variableName);
+};
 // Load the configured history file on startup.
 const loadHistoryFromEnvironment = () => {
   if (process.env.HISTFILE === undefined) {
@@ -783,6 +787,11 @@ const handleCommand = async (commandName, commandArgs, stdoutFile, stdoutMode, s
         const separatorIndex = commandArgs[0].indexOf('=');
         const variableName = commandArgs[0].slice(0, separatorIndex);
         const variableValue = commandArgs[0].slice(separatorIndex + 1);
+
+        if (!isValidShellIdentifier(variableName)) {
+          writeOutput(`declare: \`${commandArgs[0]}': not a valid identifier`, stderrFile, stderrMode);
+          break;
+        }
 
         shellVariables.set(variableName, variableValue);
       }
