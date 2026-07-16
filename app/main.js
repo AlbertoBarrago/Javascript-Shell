@@ -248,7 +248,6 @@ const printJobs = (stdoutFile, stdoutMode) => {
     }
   }
 };
-
 // Print previously executed commands.
 const printHistory = (limit, stdoutFile, stdoutMode) => {
   const startIndex = limit === null
@@ -262,7 +261,6 @@ const printHistory = (limit, stdoutFile, stdoutMode) => {
     writeOutput(lines.join('\n'), stdoutFile, stdoutMode);
   }
 };
-
 // Append commands from a history file to the in-memory history.
 const readHistoryFile = (historyFilePath) => {
   const fileContent = fs.readFileSync(historyFilePath, 'utf8');
@@ -272,13 +270,11 @@ const readHistoryFile = (historyFilePath) => {
 
   commandHistory.push(...commands);
 };
-
 // Write the in-memory history to a history file.
 const writeHistoryFile = (historyFilePath) => {
   fs.writeFileSync(historyFilePath, `${commandHistory.join('\n')}\n`);
   lastHistoryAppendIndex = commandHistory.length;
 };
-
 // Append new in-memory history entries to a history file.
 const appendHistoryFile = (historyFilePath) => {
   const newCommands = commandHistory.slice(lastHistoryAppendIndex);
@@ -289,7 +285,6 @@ const appendHistoryFile = (historyFilePath) => {
 
   lastHistoryAppendIndex = commandHistory.length;
 };
-
 // Load the configured history file on startup.
 const loadHistoryFromEnvironment = () => {
   if (process.env.HISTFILE === undefined) {
@@ -303,7 +298,6 @@ const loadHistoryFromEnvironment = () => {
     // Ignore missing or unreadable history files.
   }
 };
-
 // Save the configured history file before exiting.
 const saveHistoryToEnvironment = () => {
   if (process.env.HISTFILE !== undefined) {
@@ -349,14 +343,12 @@ const reapDoneJobs = (stdoutFile, stdoutMode) => {
     }
   }
 };
-
 // Let pending background job close events update the job table.
 const waitForBackgroundJobEvents = () => {
   return new Promise((resolve) => {
     setTimeout(resolve, 10);
   });
 };
-
 // Create an empty file at the given path
 const createRedirectionFile = (filePath, outputMode) => {
   if (filePath !== null) {
