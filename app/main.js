@@ -271,6 +271,11 @@ const readHistoryFile = (historyFilePath) => {
 
   commandHistory.push(...commands);
 };
+
+// Write the in-memory history to a history file.
+const writeHistoryFile = (historyFilePath) => {
+  fs.writeFileSync(historyFilePath, `${commandHistory.join('\n')}\n`);
+};
 // Get the next available job ID for a background job.
 const getNextJobId = () => {
   if (backgroundJobs.length === 0) {
@@ -723,6 +728,8 @@ const handleCommand = async (commandName, commandArgs, stdoutFile, stdoutMode, s
     case 'history':
       if (commandArgs[0] === '-r' && commandArgs[1] !== undefined) {
         readHistoryFile(commandArgs[1]);
+      } else if (commandArgs[0] === '-w' && commandArgs[1] !== undefined) {
+        writeHistoryFile(commandArgs[1]);
       } else {
         printHistory(
           commandArgs[0] === undefined ? null : Number(commandArgs[0]),
