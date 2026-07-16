@@ -23,6 +23,7 @@ const createShell = () => {
 
   builtinHandlers = createBuiltins({
     appendHistoryFile: history.appendHistoryFile,
+    backgroundJobs: jobs.backgroundJobs,
     builtIns: BUILT_INS,
     completionSpecs: completion.completionSpecs,
     findExecutable: executor.findExecutable,
@@ -108,9 +109,6 @@ const createShell = () => {
       commandArgs.pop();
     }
 
-    createRedirectionFile(stdoutFile, stdoutMode);
-    createRedirectionFile(stderrFile, stderrMode);
-
     if (commandName === 'type') {
       handleType(commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode);
       prompt();
@@ -118,6 +116,8 @@ const createShell = () => {
     }
 
     if (BUILT_INS.includes(commandName)) {
+      createRedirectionFile(stdoutFile, stdoutMode);
+      createRedirectionFile(stderrFile, stderrMode);
       await builtinHandlers.handleCommand(commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode);
       prompt();
       return;
@@ -130,6 +130,9 @@ const createShell = () => {
       prompt();
       return;
     }
+
+    createRedirectionFile(stdoutFile, stdoutMode);
+    createRedirectionFile(stderrFile, stderrMode);
 
     const child = await executor.runExternalCommand(
       executablePath,

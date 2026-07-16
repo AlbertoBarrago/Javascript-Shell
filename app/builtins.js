@@ -2,6 +2,7 @@ import { writeOutput } from './io.js';
 
 const createBuiltins = ({
   appendHistoryFile,
+  backgroundJobs,
   builtIns,
   completionSpecs,
   findExecutable,
@@ -14,6 +15,8 @@ const createBuiltins = ({
   waitForBackgroundJobEvents,
   writeHistoryFile,
 }) => {
+  let exitWarningShown = false;
+
   const getBuiltinOutput = (commandName, commandArgs) => {
     switch (commandName) {
       case 'echo':
@@ -39,6 +42,10 @@ const createBuiltins = ({
   };
 
   const handleCommand = async (commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode) => {
+    if (commandName !== 'exit') {
+      exitWarningShown = false;
+    }
+
     switch (commandName) {
       case 'echo':
         writeOutput(commandArgs.join(' '), stdoutFile, stdoutMode);
@@ -62,10 +69,19 @@ const createBuiltins = ({
       case 'pwd':
         writeOutput(process.cwd(), stdoutFile, stdoutMode);
         break;
-      case 'exit':
+      case 'exit': {
+        const hasRunningJobs = backgroundJobs.some((job) => job.status === 'Running');
+
+        if (hasRunningJobs && !exitWarningShown) {
+          console.log('There are running jobs.');
+          exitWarningShown = true;
+          break;
+        }
+
         saveHistoryToEnvironment();
         process.exit(0);
         break;
+      }
       case 'complete':
         if (commandArgs[0] === '-C' && commandArgs[1] !== undefined && commandArgs[2] !== undefined) {
           completionSpecs.set(commandArgs[2], commandArgs[1]);
