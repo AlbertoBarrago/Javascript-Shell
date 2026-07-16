@@ -52,6 +52,12 @@ const writeOutput = (message, outputFile) => {
   fs.writeFileSync(outputFile, `${message}\n`);
 };
 
+const createEmptyFile = (filePath) => {
+  if (filePath !== null) {
+    fs.closeSync(fs.openSync(filePath, 'w'));
+  }
+};
+
 const extractRedirection = (commandArgs) => {
   const redirections = {
     stdoutFile: null,
@@ -220,6 +226,9 @@ const handleLine = async (command) => {
     stdoutFile,
     stderrFile,
   } = extractRedirection(args.slice(1));
+
+  createEmptyFile(stdoutFile);
+  createEmptyFile(stderrFile);
 
   if (commandName === 'type') {
     if (commandArgs.length === 0) {
