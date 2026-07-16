@@ -385,48 +385,84 @@ const splitPipeline = (args) => {
     right: args.slice(pipeIndex + 1),
   };
 };
-// Run two external commands connected by a pipe.
-const runPipeline = (leftCommand, rightCommand) => {
-  return new Promise((resolve) => {
-    const leftPath = findExecutable(leftCommand[0]);
-    const rightPath = findExecutable(rightCommand[0]);
 
-    if (leftPath === null) {
-      console.log(`${leftCommand[0]}: command not found`);
-      resolve();
-      return;
-    }
-
-    if (rightPath === null) {
-      console.log(`${rightCommand[0]}: command not found`);
-      resolve();
-      return;
-    }
-
-    const left = spawn(leftPath, leftCommand.slice(1), {
-      argv0: leftCommand[0],
-      stdio: ['inherit', 'pipe', 'inherit'],
-    });
-    const right = spawn(rightPath, rightCommand.slice(1), {
-      argv0: rightCommand[0],
-      stdio: ['pipe', 'inherit', 'inherit'],
-    });
-    let closedChildren = 0;
-
-    left.stdout.pipe(right.stdin);
-
-    const handleClose = () => {
-      closedChildren++;
-
-      if (closedChildren === 2) {
-        resolve();
+// Get builtin command output for pipeline execution.
+const getBuiltinOutput = (commandName, commandArgs) => {
+  switch (commandName) {
+    case 'echo':
+      return `${commandArgs.join(' ')}\n`;
+    case 'pwd':
+      return `${process.cwd()}\n`;
+    case 'type':
+      if (commandArgs.length === 0) {
+        return 'type: missing operand\n';
       }
-    };
 
-    left.on('close', handleClose);
-    right.on('close', handleClose);
-    left.on('error', handleClose);
-    right.on('error', handleClose);
+      if (BUILT_INS.includes(commandArgs[0])) {
+        return `${commandArgs[0]} is a shell builtin\n`;
+      }
+
+      const executablePath = findExecutable(commandArgs[0]);
+      return executablePath === null
+        ? `${commandArgs[0]}: not found\n`
+        : `${commandArgs[0]} is ${executablePath}\n`;
+    default:
+      return '';
+  }
+};
+
+// Run a pipeline segment and collect its output.
+const collectCommandOutput = (command, input) => {
+  return new Promise((resolve) => {
+    const commandName = command[0];
+    const commandArgs = command.slice(1);
+
+    if (BUILT_INS.includes(commandName)) {
+      resolve(getBuiltinOutput(commandName, commandArgs));
+      return;
+    }
+
+    const commandPath = findExecutable(commandName);
+
+    if (commandPath === null) {
+      console.log(`${commandName}: command not found`);
+      resolve('');
+      return;
+    }
+
+    const child = spawn(commandPath, commandArgs, {
+      argv0: commandName,
+      stdio: ['pipe', 'pipe', 'inherit'],
+    });
+    let output = '';
+
+    child.stdout.on('data', (chunk) => {
+      output += chunk.toString();
+    });
+
+    child.on('close', () => {
+      resolve(output);
+    });
+
+    child.on('error', () => {
+      resolve('');
+    });
+
+    child.stdin.end(input);
+  });
+};
+
+// Run two commands connected by a pipe.
+const runPipeline = (leftCommand, rightCommand) => {
+  return new Promise(async (resolve) => {
+    const leftOutput = await collectCommandOutput(leftCommand, '');
+    const rightOutput = await collectCommandOutput(rightCommand, leftOutput);
+
+    if (rightOutput !== '') {
+      process.stdout.write(rightOutput);
+    }
+
+    resolve();
   });
 };
 // Parse the command line input into an array of arguments
