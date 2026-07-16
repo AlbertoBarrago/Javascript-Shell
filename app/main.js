@@ -290,6 +290,14 @@ const appendHistoryFile = (historyFilePath) => {
 const isValidShellIdentifier = (variableName) => {
   return /^[A-Za-z_][A-Za-z0-9_]*$/.test(variableName);
 };
+// Expand shell variables in parsed command arguments.
+const expandParameters = (args) => {
+  return args.map((arg) => {
+    return arg.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (_match, variableName) => {
+      return shellVariables.get(variableName) ?? '';
+    });
+  });
+};
 // Load the configured history file on startup.
 const loadHistoryFromEnvironment = () => {
   if (process.env.HISTFILE === undefined) {
@@ -814,7 +822,7 @@ const handleLine = async (command) => {
 
   commandHistory.push(trimmedCommand);
 
-  const args = parseCommandLine(trimmedCommand);
+  const args = expandParameters(parseCommandLine(trimmedCommand));
   const pipeline = splitPipeline(args);
 
   if (pipeline !== null) {
