@@ -59,16 +59,18 @@ const handleCommand = (commandName, commandArgs) => {
       console.log(commandArgs.join(' '));
       break;
     case 'cd':
-      if (targetDirectory === '~') {
-        targetDirectory = process.env.HOME;
-      }
       if (commandArgs.length === 0) {
         console.log('cd: missing operand');
       } else {
+        const requestedDirectory = commandArgs[0];
+        const targetDirectory = requestedDirectory === '~'
+          ? process.env.HOME
+          : requestedDirectory;
+
         try {
-          process.chdir(commandArgs[0]);
+          process.chdir(targetDirectory);
         } catch {
-          console.log(`cd: ${commandArgs[0]}: No such file or directory`);
+          console.log(`cd: ${requestedDirectory}: No such file or directory`);
         }
       }
       break;
