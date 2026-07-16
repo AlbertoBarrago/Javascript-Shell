@@ -17,7 +17,7 @@ rl.on('line', (command) => {
     return;
   }
   if (VALID_COMMANDS.includes(args[0])) {
-    console.log(`${args[0]}: is a shell built-in`)
+    console.log(`${args[0]} is a shell builtin`)
     rl.prompt();
     return;
   }
