@@ -32,7 +32,7 @@ const getPathCommands = () => {
 
 let previousCompletionPrefix = null;
 let previousCompletionHadMultipleMatches = false;
-
+// Find the longest common prefix among the given values.
 const findLongestCommonPrefix = (values) => {
   if (values.length === 0) {
     return '';
@@ -48,7 +48,7 @@ const findLongestCommonPrefix = (values) => {
 
   return prefix;
 };
-
+// Complete the line from the given candidates.
 const completeFromCandidates = (line, replacementStart, prefix, candidates) => {
   const matches = candidates
     .filter((candidate) => candidate.startsWith(prefix))
@@ -94,7 +94,7 @@ const completeFromCandidates = (line, replacementStart, prefix, candidates) => {
   process.stdout.write('\x07');
   return [[], line];
 };
-
+// Get the file completion candidates for the given prefix.
 const getFileCompletionCandidates = (prefix) => {
   const lastSlashIndex = prefix.lastIndexOf('/');
   const directoryPrefix = lastSlashIndex === -1
@@ -124,7 +124,6 @@ const getFileCompletionCandidates = (prefix) => {
     return [];
   }
 };
-
 // Handle tab completion for commands
 const completeCommand = (line) => {
   const lastSpaceIndex = line.lastIndexOf(' ');
@@ -139,7 +138,7 @@ const completeCommand = (line) => {
 
   return completeFromCandidates(line, lastSpaceIndex + 1, prefix, candidates);
 };
-//
+// Prepare the readline interface for user input.
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -353,6 +352,13 @@ const handleCommand = (commandName, commandArgs, stdoutFile, stdoutMode, stderrF
       process.exit(0);
       break;
     case 'complete':
+      if (commandArgs[0] === '-p' && commandArgs[1] !== undefined) {
+        writeOutput(
+          `complete: ${commandArgs[1]}: no completion specification`,
+          stderrFile,
+          stderrMode,
+        );
+      }
       break;
     default:
       writeOutput(`${commandName}: command not found`, stderrFile, stderrMode);

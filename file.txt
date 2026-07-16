@@ -1,0 +1,1 @@
+complete: git: no completion specification
