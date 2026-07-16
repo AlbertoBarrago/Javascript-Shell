@@ -16,11 +16,10 @@ rl.on('line', (command) => {
     rl.prompt();
     return;
   }
-  if (args[0] === 'exit') {
-    process.exit(0);
-  }
-  if (args[0] === 'echo') {
-    console.log(args.slice(1).join(' '));
+  if (VALID_COMMANDS.includes(arg[0])) {
+    console.log(`${args[0]}: is a shell built-in`)
+    rl.prompt();
+    return;
   }
   rl.prompt();
 })
