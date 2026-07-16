@@ -222,11 +222,16 @@ const writeOutput = (message, outputFile, outputMode = 'write') => {
 };
 
 const printJobs = (stdoutFile, stdoutMode) => {
-  const mostRecentJob = backgroundJobs[backgroundJobs.length - 1];
+  const mostRecentJobIndex = backgroundJobs.length - 1;
+  const previousJobIndex = backgroundJobs.length - 2;
   const lines = [];
 
-  for (const job of backgroundJobs) {
-    const marker = job === mostRecentJob ? '+' : ' ';
+  for (const [index, job] of backgroundJobs.entries()) {
+    const marker = index === mostRecentJobIndex
+      ? '+'
+      : index === previousJobIndex
+        ? '-'
+        : ' ';
     lines.push(`[${job.id}]${marker}  ${job.status.padEnd(24, ' ')}${job.command}`);
   }
 
