@@ -3,10 +3,11 @@ const fs = require("fs");
 const path = require("path");
 const { spawn, spawnSync } = require("child_process");
 
-const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd', 'complete', 'jobs'];
+const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd', 'complete', 'jobs', 'history'];
 const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
 const completionSpecs = new Map();
 const backgroundJobs = [];
+const commandHistory = [];
 
 // Tracks the previous completion prefix and whether it had multiple matches.
 let previousCompletionPrefix = null;
@@ -244,6 +245,17 @@ const printJobs = (stdoutFile, stdoutMode) => {
     if (backgroundJobs[index].status === 'Done') {
       backgroundJobs.splice(index, 1);
     }
+  }
+};
+
+// Print previously executed commands.
+const printHistory = (stdoutFile, stdoutMode) => {
+  const lines = commandHistory.map((command, index) => {
+    return `${String(index + 1).padStart(5, ' ')}  ${command}`;
+  });
+
+  if (lines.length > 0) {
+    writeOutput(lines.join('\n'), stdoutFile, stdoutMode);
   }
 };
 // Get the next available job ID for a background job.
@@ -691,6 +703,9 @@ const handleCommand = async (commandName, commandArgs, stdoutFile, stdoutMode, s
       await waitForBackgroundJobEvents();
       printJobs(stdoutFile, stdoutMode);
       break;
+    case 'history':
+      printHistory(stdoutFile, stdoutMode);
+      break;
     default:
       writeOutput(`${commandName}: command not found`, stderrFile, stderrMode);
   }
@@ -706,6 +721,8 @@ const handleLine = async (command) => {
     prompt();
     return;
   }
+
+  commandHistory.push(trimmedCommand);
 
   const args = parseCommandLine(trimmedCommand);
   const pipeline = splitPipeline(args);
