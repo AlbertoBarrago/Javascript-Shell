@@ -220,7 +220,7 @@ const writeOutput = (message, outputFile, outputMode = 'write') => {
     flag: outputMode === 'append' ? 'a' : 'w',
   });
 };
-
+// Print the list of background jobs to the console or a file.
 const printJobs = (stdoutFile, stdoutMode) => {
   const mostRecentJobIndex = backgroundJobs.length - 1;
   const previousJobIndex = backgroundJobs.length - 2;
@@ -246,7 +246,7 @@ const printJobs = (stdoutFile, stdoutMode) => {
     }
   }
 };
-
+// Get the next available job ID for a background job.
 const getNextJobId = () => {
   if (backgroundJobs.length === 0) {
     return 1;
@@ -254,7 +254,7 @@ const getNextJobId = () => {
 
   return Math.max(...backgroundJobs.map((job) => job.id)) + 1;
 };
-
+// Reap any done background jobs and write their output to the terminal.
 const reapDoneJobs = (stdoutFile, stdoutMode) => {
   const mostRecentJobIndex = backgroundJobs.length - 1;
   const previousJobIndex = backgroundJobs.length - 2;
@@ -283,7 +283,6 @@ const reapDoneJobs = (stdoutFile, stdoutMode) => {
     }
   }
 };
-
 // Create an empty file at the given path
 const createRedirectionFile = (filePath, outputMode) => {
   if (filePath !== null) {
@@ -333,7 +332,7 @@ const closeFileDescriptor = (fileDescriptor) => {
     fs.closeSync(fileDescriptor);
   }
 };
-
+// Run an external command with the given path, name, and arguments
 const runExternalCommand = (
   commandPath,
   commandName,
@@ -371,6 +370,63 @@ const runExternalCommand = (
       closeFileDescriptor(stderr);
       resolve();
     });
+  });
+};
+// Split command tokens into two pipeline commands.
+const splitPipeline = (args) => {
+  const pipeIndex = args.indexOf('|');
+
+  if (pipeIndex === -1) {
+    return null;
+  }
+
+  return {
+    left: args.slice(0, pipeIndex),
+    right: args.slice(pipeIndex + 1),
+  };
+};
+// Run two external commands connected by a pipe.
+const runPipeline = (leftCommand, rightCommand) => {
+  return new Promise((resolve) => {
+    const leftPath = findExecutable(leftCommand[0]);
+    const rightPath = findExecutable(rightCommand[0]);
+
+    if (leftPath === null) {
+      console.log(`${leftCommand[0]}: command not found`);
+      resolve();
+      return;
+    }
+
+    if (rightPath === null) {
+      console.log(`${rightCommand[0]}: command not found`);
+      resolve();
+      return;
+    }
+
+    const left = spawn(leftPath, leftCommand.slice(1), {
+      argv0: leftCommand[0],
+      stdio: ['inherit', 'pipe', 'inherit'],
+    });
+    const right = spawn(rightPath, rightCommand.slice(1), {
+      argv0: rightCommand[0],
+      stdio: ['pipe', 'inherit', 'inherit'],
+    });
+    let closedChildren = 0;
+
+    left.stdout.pipe(right.stdin);
+
+    const handleClose = () => {
+      closedChildren++;
+
+      if (closedChildren === 2) {
+        resolve();
+      }
+    };
+
+    left.on('close', handleClose);
+    right.on('close', handleClose);
+    left.on('error', handleClose);
+    right.on('error', handleClose);
   });
 };
 // Parse the command line input into an array of arguments
@@ -432,6 +488,16 @@ const parseCommandLine = (command) => {
       if (isAppendRedirection) {
         index++;
       }
+      continue;
+    }
+
+    if (char === '|' && !isInsideSingleQuotes && !isInsideDoubleQuotes) {
+      if (currentArg !== '') {
+        args.push(currentArg);
+        currentArg = '';
+      }
+
+      args.push(char);
       continue;
     }
 
@@ -515,6 +581,14 @@ const handleLine = async (command) => {
   }
 
   const args = parseCommandLine(trimmedCommand);
+  const pipeline = splitPipeline(args);
+
+  if (pipeline !== null) {
+    await runPipeline(pipeline.left, pipeline.right);
+    prompt();
+    return;
+  }
+
   const commandName = args[0];
   const {
     args: commandArgs,
