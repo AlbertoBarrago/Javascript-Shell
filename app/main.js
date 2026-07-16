@@ -59,6 +59,9 @@ const handleCommand = (commandName, commandArgs) => {
       console.log(commandArgs.join(' '));
       break;
     case 'cd':
+      if (targetDirectory === '~') {
+        targetDirectory = process.env.HOME;
+      }
       if (commandArgs.length === 0) {
         console.log('cd: missing operand');
       } else {
