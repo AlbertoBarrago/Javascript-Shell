@@ -35,7 +35,7 @@ const completeCommand = (line) => {
     return [[], line];
   }
 
-  const candidates = [...BUILT_INS, ...getPathCommands()];
+  const candidates = [...new Set([...BUILT_INS, ...getPathCommands()])];
   const matches = candidates
     .filter((candidate) => candidate.startsWith(line))
     .sort();
