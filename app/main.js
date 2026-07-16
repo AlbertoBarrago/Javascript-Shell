@@ -92,9 +92,20 @@ const completeFromCandidates = (line, replacementStart, prefix, candidates) => {
   return [[], line];
 };
 
-const getCurrentDirectoryEntries = () => {
+const getFileCompletionCandidates = (prefix) => {
+  const lastSlashIndex = prefix.lastIndexOf('/');
+  const directoryPrefix = lastSlashIndex === -1
+    ? ''
+    : prefix.slice(0, lastSlashIndex + 1);
+  const fileNamePrefix = lastSlashIndex === -1
+    ? prefix
+    : prefix.slice(lastSlashIndex + 1);
+  const directoryPath = directoryPrefix === '' ? process.cwd() : directoryPrefix;
+
   try {
-    return fs.readdirSync(process.cwd());
+    return fs.readdirSync(directoryPath)
+      .filter((fileName) => fileName.startsWith(fileNamePrefix))
+      .map((fileName) => `${directoryPrefix}${fileName}`);
   } catch {
     return [];
   }
@@ -110,7 +121,7 @@ const completeCommand = (line) => {
   }
 
   const prefix = line.slice(lastSpaceIndex + 1);
-  const candidates = getCurrentDirectoryEntries();
+  const candidates = getFileCompletionCandidates(prefix);
 
   return completeFromCandidates(line, lastSpaceIndex + 1, prefix, candidates);
 };
