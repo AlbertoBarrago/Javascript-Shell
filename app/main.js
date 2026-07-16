@@ -220,6 +220,21 @@ const writeOutput = (message, outputFile, outputMode = 'write') => {
     flag: outputMode === 'append' ? 'a' : 'w',
   });
 };
+
+const printJobs = (stdoutFile, stdoutMode) => {
+  const mostRecentJob = backgroundJobs[backgroundJobs.length - 1];
+  const lines = [];
+
+  for (const job of backgroundJobs) {
+    const marker = job === mostRecentJob ? '+' : ' ';
+    lines.push(`[${job.id}]${marker}  ${job.status.padEnd(24, ' ')}${job.command}`);
+  }
+
+  if (lines.length > 0) {
+    writeOutput(lines.join('\n'), stdoutFile, stdoutMode);
+  }
+};
+
 // Create an empty file at the given path
 const createRedirectionFile = (filePath, outputMode) => {
   if (filePath !== null) {
@@ -432,6 +447,7 @@ const handleCommand = (commandName, commandArgs, stdoutFile, stdoutMode, stderrF
       }
       break;
     case 'jobs':
+      printJobs(stdoutFile, stdoutMode);
       break;
     default:
       writeOutput(`${commandName}: command not found`, stderrFile, stderrMode);
@@ -517,12 +533,12 @@ const handleLine = async (command) => {
   );
 
   if (isBackground) {
-    const job = {
-      id: nextJobId,
-      pid: child.pid,
-      command: [commandName, ...commandArgs].join(' '),
-      status: 'Running',
-    };
+      const job = {
+        id: nextJobId,
+        pid: child.pid,
+        command: `${[commandName, ...commandArgs].join(' ')} &`,
+        status: 'Running',
+      };
 
     backgroundJobs.push(job);
     console.log(`[${job.id}] ${job.pid}`);
