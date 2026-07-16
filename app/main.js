@@ -40,9 +40,12 @@ const findExecutable = (commandName) => {
   return null;
 };
 
-const runExternalCommand = (commandPath, commandArgs) => {
+const runExternalCommand = (commandPath, commandName, commandArgs) => {
   return new Promise((resolve) => {
-    const child = spawn(commandPath, commandArgs, { stdio: 'inherit' });
+    const child = spawn(commandPath, commandArgs, {
+      argv0: commandName,
+      stdio: 'inherit',
+    });
 
     child.on('error', resolve);
     child.on('close', resolve);
@@ -123,7 +126,7 @@ const handleLine = async (command) => {
     return;
   }
 
-  await runExternalCommand(executablePath, commandArgs);
+  await runExternalCommand(executablePath, commandName, commandArgs);
   prompt();
 };
 
