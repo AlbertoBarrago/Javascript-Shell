@@ -41,15 +41,50 @@ const findExecutable = (commandName) => {
   return null;
 };
 
-const runExternalCommand = (commandPath, commandName, commandArgs) => {
+const writeOutput = (message, outputFile) => {
+  if (outputFile === null) {
+    console.log(message);
+    return;
+  }
+
+  fs.writeFileSync(outputFile, `${message}\n`);
+};
+
+const extractRedirection = (commandArgs) => {
+  const redirectionIndex = commandArgs.indexOf('>');
+
+  if (redirectionIndex === -1) {
+    return {
+      args: commandArgs,
+      outputFile: null,
+    };
+  }
+
+  return {
+    args: commandArgs.slice(0, redirectionIndex),
+    outputFile: commandArgs[redirectionIndex + 1] || null,
+  };
+};
+
+const runExternalCommand = (commandPath, commandName, commandArgs, outputFile) => {
   return new Promise((resolve) => {
+    const stdio = outputFile === null
+      ? 'inherit'
+      : ['inherit', fs.openSync(outputFile, 'w'), 'inherit'];
+
     const child = spawn(commandPath, commandArgs, {
       argv0: commandName,
-      stdio: 'inherit',
+      stdio,
     });
 
     child.on('error', resolve);
-    child.on('close', resolve);
+    child.on('close', () => {
+      if (Array.isArray(stdio)) {
+        fs.closeSync(stdio[1]);
+      }
+
+      resolve();
+    });
   });
 };
 
@@ -90,6 +125,16 @@ const parseCommandLine = (command) => {
       continue;
     }
 
+    if (char === '>' && !isInsideSingleQuotes && !isInsideDoubleQuotes) {
+      if (currentArg !== '') {
+        args.push(currentArg);
+        currentArg = '';
+      }
+
+      args.push(char);
+      continue;
+    }
+
     currentArg += char;
   }
 
@@ -100,10 +145,10 @@ const parseCommandLine = (command) => {
   return args;
 };
 
-const handleCommand = (commandName, commandArgs) => {
+const handleCommand = (commandName, commandArgs, outputFile) => {
   switch (commandName) {
     case 'echo':
-      console.log(commandArgs.join(' '));
+      writeOutput(commandArgs.join(' '), outputFile);
       break;
     case 'cd':
       if (commandArgs.length === 0) {
@@ -122,13 +167,13 @@ const handleCommand = (commandName, commandArgs) => {
       }
       break;
     case 'pwd':
-      console.log(process.cwd());
+      writeOutput(process.cwd(), outputFile);
       break;
     case 'exit':
       process.exit(0);
       break;
     default:
-      console.log(`${commandName}: command not found`);
+      writeOutput(`${commandName}: command not found`, outputFile);
   }
 };
 
@@ -142,7 +187,7 @@ const handleLine = async (command) => {
 
   const args = parseCommandLine(trimmedCommand);
   const commandName = args[0];
-  const commandArgs = args.slice(1);
+  const { args: commandArgs, outputFile } = extractRedirection(args.slice(1));
 
   if (commandName === 'type') {
     if (commandArgs.length === 0) {
@@ -151,7 +196,7 @@ const handleLine = async (command) => {
       return;
     }
     if (BUILT_INS.includes(commandArgs[0])) {
-      console.log(`${commandArgs[0]} is a shell builtin`);
+      writeOutput(`${commandArgs[0]} is a shell builtin`, outputFile);
       prompt();
       return;
     }
@@ -159,9 +204,9 @@ const handleLine = async (command) => {
     const executablePath = findExecutable(commandArgs[0]);
 
     if (executablePath === null) {
-      console.log(`${commandArgs[0]}: not found`);
+      writeOutput(`${commandArgs[0]}: not found`, outputFile);
     } else {
-      console.log(`${commandArgs[0]} is ${executablePath}`);
+      writeOutput(`${commandArgs[0]} is ${executablePath}`, outputFile);
     }
 
     prompt();
@@ -169,7 +214,7 @@ const handleLine = async (command) => {
   }
 
   if (BUILT_INS.includes(commandName)) {
-    handleCommand(commandName, commandArgs);
+    handleCommand(commandName, commandArgs, outputFile);
     prompt();
     return;
   }
@@ -182,7 +227,7 @@ const handleLine = async (command) => {
     return;
   }
 
-  await runExternalCommand(executablePath, commandName, commandArgs);
+  await runExternalCommand(executablePath, commandName, commandArgs, outputFile);
   prompt();
 };
 
