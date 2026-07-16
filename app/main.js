@@ -393,6 +393,8 @@ const handleCommand = (commandName, commandArgs, stdoutFile, stdoutMode, stderrF
     case 'complete':
       if (commandArgs[0] === '-C' && commandArgs[1] !== undefined && commandArgs[2] !== undefined) {
         completionSpecs.set(commandArgs[2], commandArgs[1]);
+      } else if (commandArgs[0] === '-r' && commandArgs[1] !== undefined) {
+        completionSpecs.delete(commandArgs[1]);
       } else if (commandArgs[0] === '-p' && commandArgs[1] !== undefined) {
         const completerPath = completionSpecs.get(commandArgs[1]);
 
