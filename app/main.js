@@ -380,7 +380,7 @@ const runExternalCommand = (
     });
   });
 };
-// Split command tokens into two pipeline commands.
+// Split command tokens into pipeline commands.
 const splitPipeline = (args) => {
   const pipeIndex = args.indexOf('|');
 
@@ -388,10 +388,21 @@ const splitPipeline = (args) => {
     return null;
   }
 
-  return {
-    left: args.slice(0, pipeIndex),
-    right: args.slice(pipeIndex + 1),
-  };
+  const commands = [];
+  let currentCommand = [];
+
+  for (const arg of args) {
+    if (arg === '|') {
+      commands.push(currentCommand);
+      currentCommand = [];
+      continue;
+    }
+
+    currentCommand.push(arg);
+  }
+
+  commands.push(currentCommand);
+  return commands;
 };
 
 // Get builtin command output for pipeline execution.
@@ -460,63 +471,85 @@ const collectCommandOutput = (command, input) => {
   });
 };
 
-// Run two commands connected by a pipe.
-const runPipeline = (leftCommand, rightCommand) => {
+// Run external commands connected by streaming pipes.
+const runExternalPipeline = (commands) => {
+  return new Promise((resolve) => {
+    const commandPaths = [];
+
+    for (const command of commands) {
+      const commandPath = findExecutable(command[0]);
+
+      if (commandPath === null) {
+        console.log(`${command[0]}: command not found`);
+        resolve();
+        return;
+      }
+
+      commandPaths.push(commandPath);
+    }
+
+    const children = commands.map((command, index) => {
+      const isFirst = index === 0;
+      const isLast = index === commands.length - 1;
+
+      return spawn(commandPaths[index], command.slice(1), {
+        argv0: command[0],
+        stdio: [
+          isFirst ? 'inherit' : 'pipe',
+          isLast ? 'inherit' : 'pipe',
+          'inherit',
+        ],
+      });
+    });
+
+    for (let index = 0; index < children.length - 1; index++) {
+      children[index].stdout.pipe(children[index + 1].stdin);
+      children[index + 1].stdin.on('error', () => {});
+    }
+
+    const lastChild = children[children.length - 1];
+
+    lastChild.on('close', () => {
+      for (const child of children.slice(0, -1)) {
+        if (!child.killed) {
+          child.kill();
+        }
+      }
+
+      resolve();
+    });
+
+    lastChild.on('error', () => {
+      for (const child of children.slice(0, -1)) {
+        if (!child.killed) {
+          child.kill();
+        }
+      }
+
+      resolve();
+    });
+  });
+};
+
+// Run commands connected by a pipe.
+const runPipeline = (commands) => {
   return new Promise(async (resolve) => {
-    const leftIsBuiltin = BUILT_INS.includes(leftCommand[0]);
-    const rightIsBuiltin = BUILT_INS.includes(rightCommand[0]);
+    const hasBuiltin = commands.some((command) => BUILT_INS.includes(command[0]));
 
-    if (!leftIsBuiltin && !rightIsBuiltin) {
-      const leftPath = findExecutable(leftCommand[0]);
-      const rightPath = findExecutable(rightCommand[0]);
-
-      if (leftPath === null) {
-        console.log(`${leftCommand[0]}: command not found`);
-        resolve();
-        return;
-      }
-
-      if (rightPath === null) {
-        console.log(`${rightCommand[0]}: command not found`);
-        resolve();
-        return;
-      }
-
-      const left = spawn(leftPath, leftCommand.slice(1), {
-        argv0: leftCommand[0],
-        stdio: ['inherit', 'pipe', 'inherit'],
-      });
-      const right = spawn(rightPath, rightCommand.slice(1), {
-        argv0: rightCommand[0],
-        stdio: ['pipe', 'inherit', 'inherit'],
-      });
-
-      left.stdout.pipe(right.stdin);
-      right.stdin.on('error', () => {});
-
-      right.on('close', () => {
-        if (!left.killed) {
-          left.kill();
-        }
-
-        resolve();
-      });
-
-      right.on('error', () => {
-        if (!left.killed) {
-          left.kill();
-        }
-
-        resolve();
-      });
+    if (!hasBuiltin) {
+      await runExternalPipeline(commands);
+      resolve();
       return;
     }
 
-    const leftOutput = await collectCommandOutput(leftCommand, '');
-    const rightOutput = await collectCommandOutput(rightCommand, leftOutput);
+    let output = '';
 
-    if (rightOutput !== '') {
-      process.stdout.write(rightOutput);
+    for (const command of commands) {
+      output = await collectCommandOutput(command, output);
+    }
+
+    if (output !== '') {
+      process.stdout.write(output);
     }
 
     resolve();
@@ -678,7 +711,7 @@ const handleLine = async (command) => {
   const pipeline = splitPipeline(args);
 
   if (pipeline !== null) {
-    await runPipeline(pipeline.left, pipeline.right);
+    await runPipeline(pipeline);
     prompt();
     return;
   }
