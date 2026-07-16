@@ -461,9 +461,10 @@ const collectCommandOutput = (command, input) => {
       return;
     }
 
+    const stdin = input === '' ? 'ignore' : 'pipe';
     const child = spawn(commandPath, commandArgs, {
       argv0: commandName,
-      stdio: ['pipe', 'pipe', 'inherit'],
+      stdio: [stdin, 'pipe', 'inherit'],
     });
     let output = '';
 
@@ -479,7 +480,10 @@ const collectCommandOutput = (command, input) => {
       resolve('');
     });
 
-    child.stdin.end(input);
+    if (input !== '') {
+      child.stdin.on('error', () => {});
+      child.stdin.end(input);
+    }
   });
 };
 
