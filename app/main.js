@@ -276,6 +276,11 @@ const readHistoryFile = (historyFilePath) => {
 const writeHistoryFile = (historyFilePath) => {
   fs.writeFileSync(historyFilePath, `${commandHistory.join('\n')}\n`);
 };
+
+// Append the in-memory history to a history file.
+const appendHistoryFile = (historyFilePath) => {
+  fs.appendFileSync(historyFilePath, `${commandHistory.join('\n')}\n`);
+};
 // Get the next available job ID for a background job.
 const getNextJobId = () => {
   if (backgroundJobs.length === 0) {
@@ -730,6 +735,8 @@ const handleCommand = async (commandName, commandArgs, stdoutFile, stdoutMode, s
         readHistoryFile(commandArgs[1]);
       } else if (commandArgs[0] === '-w' && commandArgs[1] !== undefined) {
         writeHistoryFile(commandArgs[1]);
+      } else if (commandArgs[0] === '-a' && commandArgs[1] !== undefined) {
+        appendHistoryFile(commandArgs[1]);
       } else {
         printHistory(
           commandArgs[0] === undefined ? null : Number(commandArgs[0]),
