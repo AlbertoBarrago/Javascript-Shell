@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { spawn, spawnSync } = require("child_process");
 
-const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd', 'complete', 'jobs', 'history'];
+const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd', 'complete', 'jobs', 'history', 'declare'];
 const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
 const completionSpecs = new Map();
 const backgroundJobs = [];
