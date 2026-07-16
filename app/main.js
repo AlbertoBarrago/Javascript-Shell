@@ -53,6 +53,35 @@ const runExternalCommand = (commandPath, commandName, commandArgs) => {
   });
 };
 
+const parseCommandLine = (command) => {
+  const args = [];
+  let currentArg = '';
+  let isInsideSingleQuotes = false;
+
+  for (const char of command) {
+    if (char === "'") {
+      isInsideSingleQuotes = !isInsideSingleQuotes;
+      continue;
+    }
+
+    if (char === ' ' && !isInsideSingleQuotes) {
+      if (currentArg !== '') {
+        args.push(currentArg);
+        currentArg = '';
+      }
+      continue;
+    }
+
+    currentArg += char;
+  }
+
+  if (currentArg !== '') {
+    args.push(currentArg);
+  }
+
+  return args;
+};
+
 const handleCommand = (commandName, commandArgs) => {
   switch (commandName) {
     case 'echo':
@@ -93,7 +122,7 @@ const handleLine = async (command) => {
     return;
   }
 
-  const args = trimmedCommand.split(/\s+/);
+  const args = parseCommandLine(trimmedCommand);
   const commandName = args[0];
   const commandArgs = args.slice(1);
 
