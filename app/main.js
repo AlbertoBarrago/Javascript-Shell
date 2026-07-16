@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { spawn, spawnSync } = require("child_process");
 
-const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd', 'complete'];
+const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd', 'complete', 'jobs'];
 const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
 const completionSpecs = new Map();
 
@@ -412,6 +412,8 @@ const handleCommand = (commandName, commandArgs, stdoutFile, stdoutMode, stderrF
           );
         }
       }
+      break;
+    case 'jobs':
       break;
     default:
       writeOutput(`${commandName}: command not found`, stderrFile, stderrMode);
