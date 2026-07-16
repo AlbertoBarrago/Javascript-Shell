@@ -8,6 +8,7 @@ const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
 const completionSpecs = new Map();
 const backgroundJobs = [];
 const commandHistory = [];
+const shellVariables = new Map();
 let lastHistoryAppendIndex = 0;
 
 // Tracks the previous completion prefix and whether it had multiple matches.
@@ -767,6 +768,15 @@ const handleCommand = async (commandName, commandArgs, stdoutFile, stdoutMode, s
           stdoutFile,
           stdoutMode,
         );
+      }
+      break;
+    case 'declare':
+      if (commandArgs[0] === '-p' && commandArgs[1] !== undefined) {
+        const variableValue = shellVariables.get(commandArgs[1]);
+
+        if (variableValue === undefined) {
+          writeOutput(`declare: ${commandArgs[1]}: not found`, stderrFile, stderrMode);
+        }
       }
       break;
     default:
