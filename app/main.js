@@ -6,6 +6,12 @@ const { spawn, spawnSync } = require("child_process");
 const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd', 'complete'];
 const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
 const completionSpecs = new Map();
+
+// Tracks the previous completion prefix and whether it had multiple matches.
+let previousCompletionPrefix = null;
+// Tracks whether the previous completion had multiple matches.
+let previousCompletionHadMultipleMatches = false;
+
 // Get the list of commands from the PATH environment variable
 const getPathCommands = () => {
   const commands = new Set();
@@ -30,9 +36,6 @@ const getPathCommands = () => {
 
   return [...commands];
 };
-
-let previousCompletionPrefix = null;
-let previousCompletionHadMultipleMatches = false;
 // Find the longest common prefix among the given values.
 const findLongestCommonPrefix = (values) => {
   if (values.length === 0) {
@@ -125,8 +128,8 @@ const getFileCompletionCandidates = (prefix) => {
     return [];
   }
 };
-
-const getRegisteredCompletionCandidates = (commandName, currentWord, previousWord) => {
+// Get the registered completion candidates for the given command and prefix.
+const getRegisteredCompletionCandidates = (commandName, currentWord, previousWord, line) => {
   const completerPath = completionSpecs.get(commandName);
 
   if (completerPath === undefined) {
@@ -135,6 +138,11 @@ const getRegisteredCompletionCandidates = (commandName, currentWord, previousWor
 
   const result = spawnSync(completerPath, [commandName, currentWord, previousWord], {
     encoding: 'utf8',
+    env: {
+      ...process.env,
+      COMP_LINE: line,
+      COMP_POINT: String(Buffer.byteLength(line)),
+    },
   });
 
   if (result.error) {
@@ -146,7 +154,6 @@ const getRegisteredCompletionCandidates = (commandName, currentWord, previousWor
     .map((candidate) => candidate.trim())
     .filter((candidate) => candidate !== '');
 };
-
 // Handle tab completion for commands
 const completeCommand = (line) => {
   const lastSpaceIndex = line.lastIndexOf(' ');
@@ -160,7 +167,7 @@ const completeCommand = (line) => {
   const prefix = line.slice(lastSpaceIndex + 1);
   const words = line.split(' ');
   const previousWord = words.length >= 2 ? words[words.length - 2] : '';
-  const registeredCandidates = getRegisteredCompletionCandidates(commandName, prefix, previousWord);
+  const registeredCandidates = getRegisteredCompletionCandidates(commandName, prefix, previousWord, line);
 
   if (registeredCandidates !== null) {
     return completeFromCandidates(line, lastSpaceIndex + 1, prefix, registeredCandidates);
