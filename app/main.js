@@ -455,6 +455,55 @@ const collectCommandOutput = (command, input) => {
 // Run two commands connected by a pipe.
 const runPipeline = (leftCommand, rightCommand) => {
   return new Promise(async (resolve) => {
+    const leftIsBuiltin = BUILT_INS.includes(leftCommand[0]);
+    const rightIsBuiltin = BUILT_INS.includes(rightCommand[0]);
+
+    if (!leftIsBuiltin && !rightIsBuiltin) {
+      const leftPath = findExecutable(leftCommand[0]);
+      const rightPath = findExecutable(rightCommand[0]);
+
+      if (leftPath === null) {
+        console.log(`${leftCommand[0]}: command not found`);
+        resolve();
+        return;
+      }
+
+      if (rightPath === null) {
+        console.log(`${rightCommand[0]}: command not found`);
+        resolve();
+        return;
+      }
+
+      const left = spawn(leftPath, leftCommand.slice(1), {
+        argv0: leftCommand[0],
+        stdio: ['inherit', 'pipe', 'inherit'],
+      });
+      const right = spawn(rightPath, rightCommand.slice(1), {
+        argv0: rightCommand[0],
+        stdio: ['pipe', 'inherit', 'inherit'],
+      });
+
+      left.stdout.pipe(right.stdin);
+      right.stdin.on('error', () => {});
+
+      right.on('close', () => {
+        if (!left.killed) {
+          left.kill();
+        }
+
+        resolve();
+      });
+
+      right.on('error', () => {
+        if (!left.killed) {
+          left.kill();
+        }
+
+        resolve();
+      });
+      return;
+    }
+
     const leftOutput = await collectCommandOutput(leftCommand, '');
     const rightOutput = await collectCommandOutput(rightCommand, leftOutput);
 
