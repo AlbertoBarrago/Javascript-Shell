@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 392" width="720" height="392" font-family="'SFMono-Regular','Menlo','Consolas',monospace" font-size="15">
+  <style>
+    .win  { fill: #1e1e2e; }
+    .bar  { fill: #313244; }
+    .title{ fill: #9399b2; font-size: 12px; }
+    .cwd  { fill: #56b6c2; }
+    .ok   { fill: #98c379; }
+    .err  { fill: #e06c75; }
+    .bi   { fill: #98c379; }
+    .ext  { fill: #56b6c2; }
+    .txt  { fill: #d4d4d4; }
+    .out  { fill: #9aa2b1; }
+
+    .row  { opacity: 0; }
+    .l0 { animation: r0 15s infinite; }
+    .l1 { animation: r1 15s infinite; }
+    .l2 { animation: r2 15s infinite; }
+    .l3 { animation: r3 15s infinite; }
+    .l4 { animation: r4 15s infinite; }
+    .l5 { animation: r5 15s infinite; }
+    .l6 { animation: r6 15s infinite; }
+    .l7 { animation: r7 15s infinite; }
+    .l8 { animation: r8 15s infinite; }
+    .l9 { animation: r9 15s infinite; }
+
+    @keyframes r0 { 0%,5.3%{opacity:0} 6.8%,92%{opacity:1} 96%,100%{opacity:0} }
+    @keyframes r1 { 0%,13%{opacity:0}  14.5%,92%{opacity:1} 96%,100%{opacity:0} }
+    @keyframes r2 { 0%,20.7%{opacity:0} 22.2%,92%{opacity:1} 96%,100%{opacity:0} }
+    @keyframes r3 { 0%,28.3%{opacity:0} 29.8%,92%{opacity:1} 96%,100%{opacity:0} }
+    @keyframes r4 { 0%,36%{opacity:0}  37.5%,92%{opacity:1} 96%,100%{opacity:0} }
+    @keyframes r5 { 0%,43.7%{opacity:0} 45.2%,92%{opacity:1} 96%,100%{opacity:0} }
+    @keyframes r6 { 0%,51.3%{opacity:0} 52.8%,92%{opacity:1} 96%,100%{opacity:0} }
+    @keyframes r7 { 0%,59%{opacity:0}  60.5%,92%{opacity:1} 96%,100%{opacity:0} }
+    @keyframes r8 { 0%,66.7%{opacity:0} 68.2%,92%{opacity:1} 96%,100%{opacity:0} }
+    @keyframes r9 { 0%,74.3%{opacity:0} 75.8%,92%{opacity:1} 96%,100%{opacity:0} }
+
+    .cursor { animation: blink 1s steps(1) infinite; }
+    @keyframes blink { 0%,50%{opacity:1} 50.01%,100%{opacity:0} }
+  </style>
+
+  <rect class="win" x="0" y="0" width="720" height="392" rx="10"/>
+  <rect class="bar" x="0" y="0" width="720" height="34" rx="10"/>
+  <rect class="bar" x="0" y="22" width="720" height="12"/>
+  <circle cx="20" cy="17" r="6" fill="#e06c75"/>
+  <circle cx="40" cy="17" r="6" fill="#e5c07b"/>
+  <circle cx="60" cy="17" r="6" fill="#98c379"/>
+  <text class="title" x="360" y="21" text-anchor="middle">js-shell</text>
+
+  <text class="row l0" x="28" y="72"><tspan class="cwd">~/shell </tspan><tspan class="ok">$ </tspan><tspan class="bi">echo </tspan><tspan class="txt">hello</tspan></text>
+  <text class="row l1" x="28" y="102"><tspan class="out">hello</tspan></text>
+
+  <text class="row l2" x="28" y="132"><tspan class="cwd">~/shell </tspan><tspan class="ok">$ </tspan><tspan class="ext">ls </tspan><tspan class="txt">| </tspan><tspan class="ext">grep </tspan><tspan class="txt">.js</tspan></text>
+  <text class="row l3" x="28" y="162"><tspan class="out">main.js  parser.js  executor.js</tspan></text>
+
+  <text class="row l4" x="28" y="192"><tspan class="cwd">~/shell </tspan><tspan class="ok">$ </tspan><tspan class="bi">cd </tspan><tspan class="txt">/tmp</tspan></text>
+  <text class="row l5" x="28" y="222"><tspan class="cwd">/tmp </tspan><tspan class="ok">$ </tspan><tspan class="bi">cd </tspan><tspan class="txt">-</tspan></text>
+  <text class="row l6" x="28" y="252"><tspan class="out">~/shell</tspan></text>
+
+  <text class="row l7" x="28" y="282"><tspan class="cwd">~/shell </tspan><tspan class="ok">$ </tspan><tspan class="err">nope</tspan></text>
+  <text class="row l8" x="28" y="312"><tspan class="err">nope: command not found</tspan></text>
+
+  <text class="row l9" x="28" y="342"><tspan class="cwd">~/shell </tspan><tspan class="err">$ </tspan><tspan class="txt cursor">&#9608;</tspan></text>
+</svg>

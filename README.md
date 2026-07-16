@@ -2,10 +2,17 @@
 
 A small POSIX-style shell built in JavaScript as a study project.
 
+![Animated demo of the shell](docs/demo.svg)
+
 ## Features
 
-- Interactive REPL with `$ ` prompt
+- Interactive REPL with an adaptive prompt
+- Colored prompt showing the working directory and the previous command's exit
+  status, honoring `NO_COLOR`, `TERM=dumb` and non-TTY output
+- Real-time command highlighting: the command word is colored as you type
+  (green for builtins, cyan for executables in `PATH`, red otherwise)
 - Builtins: `echo`, `cd`, `pwd`, `type`, `exit`, `complete`, `jobs`, `history`, `declare`
+- `cd -` and `cd -N` directory-stack navigation (zsh-style)
 - External command execution through `PATH`
 - Single and double quote parsing
 - Backslash escaping
@@ -19,7 +26,7 @@ A small POSIX-style shell built in JavaScript as a study project.
 
 ## Architecture
 
-The shell is intentionally split into small CommonJS modules:
+The shell is intentionally split into small ES modules:
 
 - `app/main.js`: process entrypoint
 - `app/shell.js`: readline loop and command orchestration
@@ -31,7 +38,11 @@ The shell is intentionally split into small CommonJS modules:
 - `app/jobs.js`: background job tracking
 - `app/variables.js`: shell variables and parameter expansion
 - `app/io.js`: output and file descriptor helpers
+- `app/colors.js`: ANSI color helpers and terminal capability detection
 - `app/constants.js`: shared shell constants
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for a detailed walkthrough of
+the runtime flows with Mermaid diagrams.
 
 ## Development
 
