@@ -6,5 +6,21 @@ const rl = readline.createInterface({
   prompt: "$ ",
 });
 
-// TODO: Uncomment the code below to pass the first stage
+const VALID_COMMANDS = ['exit', 'echo', 'cd'];
+
 rl.prompt();
+rl.on('line', (command) => {
+  const args = command.trim().split(/\s+/);
+  if (!VALID_COMMANDS.includes(args[0])) {
+    console.log(`Unknown command: ${args[0]}`);
+    rl.prompt();
+    return;
+  }
+  if (args[0] === 'exit') {
+    process.exit(0);
+  }
+  if (args[0] === 'echo') {
+    console.log(args.slice(1).join(' '));
+  }
+  rl.prompt();
+})
