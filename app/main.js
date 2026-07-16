@@ -6,7 +6,7 @@ const rl = readline.createInterface({
   prompt: "$ ",
 });
 
-const VALID_COMMANDS = ['exit', 'echo', 'cd'];
+const VALID_COMMANDS = ['type', 'echo', 'cd'];
 
 rl.prompt();
 rl.on('line', (command) => {
