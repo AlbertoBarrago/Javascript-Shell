@@ -3,10 +3,51 @@ const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
 
+const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd'];
+const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
+
+const getPathCommands = () => {
+  const commands = new Set();
+  const paths = (process.env.PATH || '').split(path.delimiter);
+
+  for (const directory of paths) {
+    try {
+      for (const fileName of fs.readdirSync(directory)) {
+        const executablePath = path.join(directory, fileName);
+
+        try {
+          fs.accessSync(executablePath, fs.constants.X_OK);
+          commands.add(fileName);
+        } catch {
+          // Ignore non-executable files.
+        }
+      }
+    } catch {
+      // Ignore PATH entries that cannot be read.
+    }
+  }
+
+  return [...commands];
+};
+
+const completeCommand = (line) => {
+  if (line.includes(' ')) {
+    return [[], line];
+  }
+
+  const candidates = [...BUILT_INS, ...getPathCommands()];
+  const matches = candidates
+    .filter((candidate) => candidate.startsWith(line))
+    .sort();
+
+  return [matches.length === 0 ? candidates : matches, line];
+};
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
   prompt: "$ ",
+  completer: completeCommand,
 });
 
 let isReadlineClosed = false;
@@ -21,9 +62,6 @@ const prompt = () => {
 rl.on('close', () => {
   isReadlineClosed = true;
 });
-
-const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd'];
-const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
 
 // Find the executable for the given command name
 const findExecutable = (commandName) => {
