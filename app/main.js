@@ -57,14 +57,20 @@ const parseCommandLine = (command) => {
   const args = [];
   let currentArg = '';
   let isInsideSingleQuotes = false;
+  let isInsideDoubleQuotes = false;
 
   for (const char of command) {
-    if (char === "'") {
+    if (char === "'" && !isInsideDoubleQuotes) {
       isInsideSingleQuotes = !isInsideSingleQuotes;
       continue;
     }
 
-    if (char === ' ' && !isInsideSingleQuotes) {
+    if (char === '"' && !isInsideSingleQuotes) {
+      isInsideDoubleQuotes = !isInsideDoubleQuotes;
+      continue;
+    }
+
+    if (char === ' ' && !isInsideSingleQuotes && !isInsideDoubleQuotes) {
       if (currentArg !== '') {
         args.push(currentArg);
         currentArg = '';
