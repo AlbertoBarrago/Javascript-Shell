@@ -289,6 +289,29 @@ const appendHistoryFile = (historyFilePath) => {
 
   lastHistoryAppendIndex = commandHistory.length;
 };
+
+// Load the configured history file on startup.
+const loadHistoryFromEnvironment = () => {
+  if (process.env.HISTFILE === undefined) {
+    return;
+  }
+
+  try {
+    readHistoryFile(process.env.HISTFILE);
+    lastHistoryAppendIndex = commandHistory.length;
+  } catch {
+    // Ignore missing or unreadable history files.
+  }
+};
+
+// Save the configured history file before exiting.
+const saveHistoryToEnvironment = () => {
+  if (process.env.HISTFILE !== undefined) {
+    writeHistoryFile(process.env.HISTFILE);
+  }
+};
+
+loadHistoryFromEnvironment();
 // Get the next available job ID for a background job.
 const getNextJobId = () => {
   if (backgroundJobs.length === 0) {
@@ -709,6 +732,7 @@ const handleCommand = async (commandName, commandArgs, stdoutFile, stdoutMode, s
       writeOutput(process.cwd(), stdoutFile, stdoutMode);
       break;
     case 'exit':
+      saveHistoryToEnvironment();
       process.exit(0);
       break;
     case 'complete':
