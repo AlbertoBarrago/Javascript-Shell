@@ -1,34 +1,68 @@
+# CodeCrafters Shell
+
+A small POSIX-style shell built in JavaScript for the CodeCrafters
+["Build Your Own Shell" challenge](https://app.codecrafters.io/courses/shell/overview).
+
 [![progress-banner](https://backend.codecrafters.io/progress/shell/e363e877-7bc2-473c-8730-4e82decd5d24)](https://app.codecrafters.io/users/AlbertoBarrago?r=2qF)
 
-This is a starting point for JavaScript solutions to the
-["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
+## Features
 
-In this challenge, you'll build your own POSIX compliant shell that's capable of
-interpreting shell commands, running external programs and builtin commands like
-cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
-REPLs, builtin commands, and more.
+- Interactive REPL with `$ ` prompt
+- Builtins: `echo`, `cd`, `pwd`, `type`, `exit`, `complete`, `jobs`, `history`, `declare`
+- External command execution through `PATH`
+- Single and double quote parsing
+- Backslash escaping
+- Standard output and error redirection
+- Append redirection
+- Pipelines
+- Background jobs
+- Tab completion for commands, files, and registered completion handlers
+- Persistent history through `HISTFILE`
+- Shell variable declaration and parameter expansion
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+## Architecture
 
-# Passing the first stage
+The shell is intentionally split into small CommonJS modules:
 
-The entry point for your `shell` implementation is in `app/main.js`. Study and
-uncomment the relevant code, then run the command below to execute the tests on
-our servers:
+- `app/main.js`: process entrypoint
+- `app/shell.js`: readline loop and command orchestration
+- `app/parser.js`: command parsing, pipelines, and redirection extraction
+- `app/executor.js`: executable lookup, external command execution, and pipelines
+- `app/builtins.js`: builtin command behavior
+- `app/completion.js`: tab completion logic
+- `app/history.js`: in-memory and persistent command history
+- `app/jobs.js`: background job tracking
+- `app/variables.js`: shell variables and parameter expansion
+- `app/io.js`: output and file descriptor helpers
+- `app/constants.js`: shared shell constants
+
+## Development
+
+Requirements:
+
+- Node.js 25, as expected by the CodeCrafters environment
+- The CodeCrafters CLI for remote challenge tests
+
+Run the shell locally:
+
+```sh
+./your_program.sh
+```
+
+Run it directly with Node:
+
+```sh
+npm run dev
+```
+
+Submit the full challenge test suite:
 
 ```sh
 codecrafters submit
 ```
 
-Time to move on to the next stage!
+## Notes
 
-# Stage 2 & beyond
-
-Note: This section is for stages 2 and beyond.
-
-1. Ensure you have `node (25)` installed locally
-1. Run `./your_program.sh` to run your program, which is implemented in
-   `app/main.js`.
-1. Run `codecrafters submit` to submit your solution to CodeCrafters. Test
-   output will be streamed to your terminal.
+This repository is a study project. The goal is to keep the implementation
+readable and easy to evolve while preserving the behavior required by the
+CodeCrafters tester.
