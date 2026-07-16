@@ -292,15 +292,17 @@ const isValidShellIdentifier = (variableName) => {
 };
 // Expand shell variables in parsed command arguments.
 const expandParameters = (args) => {
-  return args.map((arg) => {
-    return arg
-      .replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_match, variableName) => {
-        return shellVariables.get(variableName) ?? '';
-      })
-      .replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (_match, variableName) => {
-        return shellVariables.get(variableName) ?? '';
-      });
-  });
+  return args
+    .map((arg) => {
+      return arg
+        .replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_match, variableName) => {
+          return shellVariables.get(variableName) ?? '';
+        })
+        .replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (_match, variableName) => {
+          return shellVariables.get(variableName) ?? '';
+        });
+    })
+    .filter((arg) => arg !== '');
 };
 // Load the configured history file on startup.
 const loadHistoryFromEnvironment = () => {
