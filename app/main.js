@@ -51,7 +51,7 @@ const writeOutput = (message, outputFile) => {
 };
 
 const extractRedirection = (commandArgs) => {
-  const redirectionIndex = commandArgs.indexOf('>');
+  const redirectionIndex = commandArgs.findIndex((arg) => arg === '>' || arg === '1>');
 
   if (redirectionIndex === -1) {
     return {
@@ -126,6 +126,12 @@ const parseCommandLine = (command) => {
     }
 
     if (char === '>' && !isInsideSingleQuotes && !isInsideDoubleQuotes) {
+      if (currentArg === '1') {
+        args.push('1>');
+        currentArg = '';
+        continue;
+      }
+
       if (currentArg !== '') {
         args.push(currentArg);
         currentArg = '';
