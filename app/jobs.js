@@ -79,6 +79,6 @@ const createJobs = (writeOutput) => {
   };
 };
 
-module.exports = {
+export {
   createJobs,
 };

@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const { spawnSync } = require('child_process');
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const createCompletion = (builtIns) => {
   const completionSpecs = new Map();
@@ -180,6 +180,6 @@ const createCompletion = (builtIns) => {
   };
 };
 
-module.exports = {
+export {
   createCompletion,
 };

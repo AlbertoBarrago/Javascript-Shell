@@ -26,6 +26,6 @@ const createVariables = () => {
   };
 };
 
-module.exports = {
+export {
   createVariables,
 };

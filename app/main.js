@@ -1,4 +1,4 @@
-const { createShell } = require('./shell');
+import createShell from './shell.js';
 
 const shell = createShell();
 

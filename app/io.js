@@ -1,4 +1,4 @@
-const fs = require('fs');
+import fs from 'node:fs';
 
 const writeOutput = (message, outputFile, outputMode = 'write') => {
   if (outputFile === null) {
@@ -23,7 +23,7 @@ const closeFileDescriptor = (fileDescriptor) => {
   }
 };
 
-module.exports = {
+export {
   closeFileDescriptor,
   createRedirectionFile,
   writeOutput,

@@ -1,7 +1,8 @@
-const fs = require('fs');
-const path = require('path');
-const { spawn } = require('child_process');
-const { closeFileDescriptor } = require('./io');
+import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { closeFileDescriptor } from './io.js';
 
 const createExecutor = (builtIns, getBuiltinOutput) => {
   const findExecutable = (commandName) => {
@@ -195,6 +196,6 @@ const createExecutor = (builtIns, getBuiltinOutput) => {
   };
 };
 
-module.exports = {
+export {
   createExecutor,
 };

@@ -1,4 +1,4 @@
-const fs = require('fs');
+import fs from 'node:fs';
 
 const createHistory = () => {
   const commandHistory = [];
@@ -71,6 +71,6 @@ const createHistory = () => {
   };
 };
 
-module.exports = {
+export {
   createHistory,
 };

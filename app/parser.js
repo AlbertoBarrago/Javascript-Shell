@@ -1,4 +1,4 @@
-const { REDIRECTION_OPERATORS } = require('./constants');
+import { REDIRECTION_OPERATORS } from './constants.js';
 
 const parseCommandLine = (command) => {
   const args = [];
@@ -142,7 +142,7 @@ const splitPipeline = (args) => {
   return commands;
 };
 
-module.exports = {
+export {
   extractRedirection,
   parseCommandLine,
   splitPipeline,

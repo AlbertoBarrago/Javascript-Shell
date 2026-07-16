@@ -1,13 +1,14 @@
-const readline = require('readline');
-const { createBuiltins } = require('./builtins');
-const { createCompletion } = require('./completion');
-const { BUILT_INS } = require('./constants');
-const { createExecutor } = require('./executor');
-const { createHistory } = require('./history');
-const { createJobs } = require('./jobs');
-const { createRedirectionFile, writeOutput } = require('./io');
-const { extractRedirection, parseCommandLine, splitPipeline } = require('./parser');
-const { createVariables } = require('./variables');
+import readline from 'node:readline';
+
+import { createBuiltins } from './builtins.js';
+import { createCompletion } from './completion.js';
+import { BUILT_INS } from './constants.js';
+import { createExecutor } from './executor.js';
+import { createHistory } from './history.js';
+import { createJobs } from './jobs.js';
+import { createRedirectionFile, writeOutput } from './io.js';
+import { extractRedirection, parseCommandLine, splitPipeline } from './parser.js';
+import { createVariables } from './variables.js';
 
 const createShell = () => {
   const history = createHistory();
@@ -180,6 +181,4 @@ const createShell = () => {
   };
 };
 
-module.exports = {
-  createShell,
-};
+export default createShell;

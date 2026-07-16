@@ -1,4 +1,4 @@
-const { writeOutput } = require('./io');
+import { writeOutput } from './io.js';
 
 const createBuiltins = ({
   appendHistoryFile,
@@ -142,6 +142,6 @@ const createBuiltins = ({
   };
 };
 
-module.exports = {
+export {
   createBuiltins,
 };
