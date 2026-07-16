@@ -1,9 +1,6 @@
-# CodeCrafters Shell
+# JavaScript Shell
 
-A small POSIX-style shell built in JavaScript for the CodeCrafters
-["Build Your Own Shell" challenge](https://app.codecrafters.io/courses/shell/overview).
-
-[![progress-banner](https://backend.codecrafters.io/progress/shell/e363e877-7bc2-473c-8730-4e82decd5d24)](https://app.codecrafters.io/users/AlbertoBarrago?r=2qF)
+A small POSIX-style shell built in JavaScript as a study project.
 
 ## Features
 
@@ -40,10 +37,9 @@ The shell is intentionally split into small CommonJS modules:
 
 Requirements:
 
-- Node.js 25, as expected by the CodeCrafters environment
-- The CodeCrafters CLI for remote challenge tests
+- Node.js 25
 
-Run the shell locally:
+Start the shell:
 
 ```sh
 ./your_program.sh
@@ -55,14 +51,8 @@ Run it directly with Node:
 npm run dev
 ```
 
-Submit the full challenge test suite:
-
-```sh
-codecrafters submit
-```
-
 ## Notes
 
 This repository is a study project. The goal is to keep the implementation
-readable and easy to evolve while preserving the behavior required by the
-CodeCrafters tester.
+readable and easy to evolve while keeping the shell usable from the command
+line.

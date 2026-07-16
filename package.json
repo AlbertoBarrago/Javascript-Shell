@@ -1,13 +1,15 @@
 {
-  "name": "@codecrafters/build-your-own-shell",
+  "name": "javascript-shell",
   "version": "1.0.0",
-  "description": "Build your own Shell challenge, from CodeCrafters",
+  "description": "A small POSIX-style shell built in JavaScript",
   "main": "main.js",
   "scripts": {
     "dev": "node app/main.js"
   },
   "keywords": [
-    "build-your-own-x"
+    "shell",
+    "javascript",
+    "cli"
   ],
   "author": "",
   "license": "MIT",
