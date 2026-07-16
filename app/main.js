@@ -11,6 +11,7 @@ const rl = readline.createInterface({
 
 let isReadlineClosed = false;
 
+// Prompt the user for input.
 const prompt = () => {
   if (!isReadlineClosed) {
     rl.prompt();
@@ -21,7 +22,7 @@ rl.on('close', () => {
   isReadlineClosed = true;
 });
 
-const BUILT_INS = ['type', 'echo', 'cd', 'exit'];
+const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd'];
 
 const findExecutable = (commandName) => {
   const paths = (process.env.PATH || '').split(path.delimiter);
@@ -67,6 +68,9 @@ const handleCommand = (commandName, commandArgs) => {
           console.log(`cd: ${commandArgs[0]}: No such file or directory`);
         }
       }
+      break;
+    case 'pwd':
+      console.log(process.cwd());
       break;
     case 'exit':
       process.exit(0);
@@ -132,7 +136,10 @@ const handleLine = async (command) => {
 
 let pendingCommand = Promise.resolve();
 
+// Read user input and handle commands asynchronously.
 prompt();
+// Handle each line of input sequentially.
 rl.on('line', (command) => {
+  // Wait for the current command to complete before handling the next one.
   pendingCommand = pendingCommand.then(() => handleLine(command));
 });
