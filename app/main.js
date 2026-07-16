@@ -40,7 +40,11 @@ const completeCommand = (line) => {
     .filter((candidate) => candidate.startsWith(line))
     .sort();
 
-  return [matches.length === 0 ? candidates : matches, line];
+  if (matches.length === 1) {
+    return [[`${matches[0]} `], line];
+  }
+
+  return [matches, line];
 };
 
 const rl = readline.createInterface({
