@@ -42,7 +42,7 @@ Requirements:
 Start the shell:
 
 ```sh
-./your_program.sh
+./js-shell.sh
 ```
 
 Run it directly with Node:
