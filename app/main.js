@@ -8,6 +8,7 @@ const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
 const completionSpecs = new Map();
 const backgroundJobs = [];
 const commandHistory = [];
+let lastHistoryAppendIndex = 0;
 
 // Tracks the previous completion prefix and whether it had multiple matches.
 let previousCompletionPrefix = null;
@@ -275,11 +276,18 @@ const readHistoryFile = (historyFilePath) => {
 // Write the in-memory history to a history file.
 const writeHistoryFile = (historyFilePath) => {
   fs.writeFileSync(historyFilePath, `${commandHistory.join('\n')}\n`);
+  lastHistoryAppendIndex = commandHistory.length;
 };
 
-// Append the in-memory history to a history file.
+// Append new in-memory history entries to a history file.
 const appendHistoryFile = (historyFilePath) => {
-  fs.appendFileSync(historyFilePath, `${commandHistory.join('\n')}\n`);
+  const newCommands = commandHistory.slice(lastHistoryAppendIndex);
+
+  if (newCommands.length > 0) {
+    fs.appendFileSync(historyFilePath, `${newCommands.join('\n')}\n`);
+  }
+
+  lastHistoryAppendIndex = commandHistory.length;
 };
 // Get the next available job ID for a background job.
 const getNextJobId = () => {
