@@ -20,7 +20,7 @@ rl.on('line', (command) => {
       return;
     }
     if (!VALID_COMMANDS.includes(commandArgs[0])) {
-      console.log(`${commandArgs[0]}: command not found`);
+      console.log(`${commandArgs[0]}: not found`);
     } else {
       console.log(`${commandArgs[0]} is a shell builtin`)
     }
