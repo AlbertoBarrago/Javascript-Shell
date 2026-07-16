@@ -17,6 +17,41 @@ const createBuiltins = ({
 }) => {
   let exitWarningShown = false;
 
+  // Directory stack, zsh-style: index 0 is always the current directory,
+  // later entries are previously visited directories (most recent first).
+  // Navigated with `cd -` (previous) and `cd -N` (Nth entry).
+  const directoryStack = [process.cwd()];
+
+  /**
+   * Change directory and keep the directory stack and PWD/OLDPWD env vars in
+   * sync. The resolved destination is moved to the front of the stack.
+   *
+   * @param {string} target - Absolute or relative destination path.
+   * @returns {boolean} True on success, false if the directory is unreachable.
+   */
+  const changeDirectory = (target) => {
+    const previousDirectory = process.cwd();
+
+    try {
+      process.chdir(target);
+    } catch {
+      return false;
+    }
+
+    const resolvedDirectory = process.cwd();
+    const existingIndex = directoryStack.indexOf(resolvedDirectory);
+
+    if (existingIndex !== -1) {
+      directoryStack.splice(existingIndex, 1);
+    }
+
+    directoryStack.unshift(resolvedDirectory);
+    process.env.OLDPWD = previousDirectory;
+    process.env.PWD = resolvedDirectory;
+
+    return true;
+  };
+
   const getBuiltinOutput = (commandName, commandArgs) => {
     switch (commandName) {
       case 'echo':
@@ -50,22 +85,41 @@ const createBuiltins = ({
       case 'echo':
         writeOutput(commandArgs.join(' '), stdoutFile, stdoutMode);
         break;
-      case 'cd':
+      case 'cd': {
         if (commandArgs.length === 0) {
           console.log('cd: missing operand');
-        } else {
-          const requestedDirectory = commandArgs[0];
-          const targetDirectory = requestedDirectory === '~'
-            ? process.env.HOME
-            : requestedDirectory;
-
-          try {
-            process.chdir(targetDirectory);
-          } catch {
-            console.log(`cd: ${requestedDirectory}: No such file or directory`);
-          }
+          break;
         }
+
+        const requestedDirectory = commandArgs[0];
+        const stackEntryMatch = requestedDirectory.match(/^-(\d*)$/);
+
+        if (stackEntryMatch !== null) {
+          const stackIndex = stackEntryMatch[1] === '' ? 1 : Number(stackEntryMatch[1]);
+          const targetDirectory = directoryStack[stackIndex];
+
+          if (targetDirectory === undefined) {
+            console.log(`cd: ${requestedDirectory}: no such entry in dir stack`);
+            break;
+          }
+
+          if (changeDirectory(targetDirectory)) {
+            console.log(process.cwd());
+          }
+
+          break;
+        }
+
+        const targetDirectory = requestedDirectory === '~'
+          ? process.env.HOME
+          : requestedDirectory;
+
+        if (!changeDirectory(targetDirectory)) {
+          console.log(`cd: ${requestedDirectory}: No such file or directory`);
+        }
+
         break;
+      }
       case 'pwd':
         writeOutput(process.cwd(), stdoutFile, stdoutMode);
         break;
