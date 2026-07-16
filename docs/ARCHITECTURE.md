@@ -62,7 +62,7 @@ flowchart TD
   C -->|yes| P[redraw prompt]
   C -->|no| D[push to history]
   D --> E[parseCommandLine<br/>tokenize]
-  E --> F[expandParameters<br/>$VAR / ${VAR}]
+  E --> F["expandParameters<br/>$VAR and $&#123;VAR&#125;"]
   F --> G{contains a pipe?}
 
   G -->|yes| H[runPipeline] --> P
