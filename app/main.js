@@ -49,23 +49,16 @@ const findLongestCommonPrefix = (values) => {
   return prefix;
 };
 
-// Handle tab completion for commands
-const completeCommand = (line) => {
-  if (line.includes(' ')) {
-    previousCompletionPrefix = null;
-    previousCompletionHadMultipleMatches = false;
-    return [[], line];
-  }
-
-  const candidates = [...new Set([...BUILT_INS, ...getPathCommands()])];
+const completeFromCandidates = (line, replacementStart, prefix, candidates) => {
   const matches = candidates
-    .filter((candidate) => candidate.startsWith(line))
+    .filter((candidate) => candidate.startsWith(prefix))
     .sort();
+  const lineBeforeReplacement = line.slice(0, replacementStart);
 
   if (matches.length === 1) {
     previousCompletionPrefix = null;
     previousCompletionHadMultipleMatches = false;
-    return [[`${matches[0]} `], line];
+    return [[`${lineBeforeReplacement}${matches[0]} `], line];
   }
 
   if (matches.length === 0) {
@@ -77,10 +70,10 @@ const completeCommand = (line) => {
 
   const commonPrefix = findLongestCommonPrefix(matches);
 
-  if (commonPrefix.length > line.length) {
+  if (commonPrefix.length > prefix.length) {
     previousCompletionPrefix = null;
     previousCompletionHadMultipleMatches = false;
-    return [[commonPrefix], line];
+    return [[`${lineBeforeReplacement}${commonPrefix}`], line];
   }
 
   if (
@@ -97,6 +90,29 @@ const completeCommand = (line) => {
   previousCompletionHadMultipleMatches = true;
   process.stdout.write('\x07');
   return [[], line];
+};
+
+const getCurrentDirectoryEntries = () => {
+  try {
+    return fs.readdirSync(process.cwd());
+  } catch {
+    return [];
+  }
+};
+
+// Handle tab completion for commands
+const completeCommand = (line) => {
+  const lastSpaceIndex = line.lastIndexOf(' ');
+
+  if (lastSpaceIndex === -1) {
+    const candidates = [...new Set([...BUILT_INS, ...getPathCommands()])];
+    return completeFromCandidates(line, 0, line, candidates);
+  }
+
+  const prefix = line.slice(lastSpaceIndex + 1);
+  const candidates = getCurrentDirectoryEntries();
+
+  return completeFromCandidates(line, lastSpaceIndex + 1, prefix, candidates);
 };
 
 const rl = readline.createInterface({
