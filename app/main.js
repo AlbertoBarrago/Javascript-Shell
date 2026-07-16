@@ -5,7 +5,7 @@ const { spawn } = require("child_process");
 
 const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd'];
 const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
-
+// Get the list of commands from the PATH environment variable
 const getPathCommands = () => {
   const commands = new Set();
   const paths = (process.env.PATH || '').split(path.delimiter);
@@ -30,8 +30,13 @@ const getPathCommands = () => {
   return [...commands];
 };
 
+let previousCompletionPrefix = null;
+let previousCompletionHadMultipleMatches = false;
+// Handle tab completion for commands
 const completeCommand = (line) => {
   if (line.includes(' ')) {
+    previousCompletionPrefix = null;
+    previousCompletionHadMultipleMatches = false;
     return [[], line];
   }
 
@@ -41,14 +46,32 @@ const completeCommand = (line) => {
     .sort();
 
   if (matches.length === 1) {
+    previousCompletionPrefix = null;
+    previousCompletionHadMultipleMatches = false;
     return [[`${matches[0]} `], line];
   }
 
   if (matches.length === 0) {
+    previousCompletionPrefix = null;
+    previousCompletionHadMultipleMatches = false;
     process.stdout.write('\x07');
+    return [[], line];
   }
 
-  return [matches, line];
+  if (
+    previousCompletionPrefix === line
+    && previousCompletionHadMultipleMatches
+  ) {
+    process.stdout.write(`\n${matches.join('  ')}\n$ ${line}`);
+    previousCompletionPrefix = null;
+    previousCompletionHadMultipleMatches = false;
+    return [[], line];
+  }
+
+  previousCompletionPrefix = line;
+  previousCompletionHadMultipleMatches = true;
+  process.stdout.write('\x07');
+  return [[], line];
 };
 
 const rl = readline.createInterface({
@@ -277,6 +300,9 @@ const handleCommand = (commandName, commandArgs, stdoutFile, stdoutMode, stderrF
 };
 // Handle a single line of input from the user
 const handleLine = async (command) => {
+  previousCompletionPrefix = null;
+  previousCompletionHadMultipleMatches = false;
+
   const trimmedCommand = command.trim();
 
   if (trimmedCommand === '') {
