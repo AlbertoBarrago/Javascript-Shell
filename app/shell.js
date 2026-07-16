@@ -9,6 +9,7 @@ import { createJobs } from './jobs.js';
 import { createRedirectionFile, writeOutput } from './io.js';
 import { extractRedirection, parseCommandLine, splitPipeline } from './parser.js';
 import { createVariables } from './variables.js';
+import { colorize, supportsColor } from './colors.js';
 
 const createShell = () => {
   const history = createHistory();
@@ -46,10 +47,33 @@ const createShell = () => {
 
   let pendingCommand = Promise.resolve();
   let isReadlineClosed = false;
+  let lastExitCode = 0;
+
+  /**
+   * Build the interactive prompt. When colors are supported, the current
+   * working directory is highlighted and the trailing symbol reflects the
+   * previous command's exit status (green on success, red on failure).
+   *
+   * @returns {string} The prompt string, possibly containing ANSI codes.
+   */
+  const buildPrompt = () => {
+    const colorsEnabled = supportsColor();
+
+    if (!colorsEnabled) {
+      return '$ ';
+    }
+
+    const workingDirectory = colorize(process.cwd(), 'cyan', colorsEnabled);
+    const symbolColor = lastExitCode === 0 ? 'green' : 'red';
+    const symbol = colorize('$', symbolColor, colorsEnabled);
+
+    return `${workingDirectory} ${symbol} `;
+  };
 
   const prompt = () => {
     if (!isReadlineClosed) {
       jobs.reapDoneJobs(null, 'write');
+      rl.setPrompt(buildPrompt());
       rl.prompt();
     }
   };
@@ -119,6 +143,7 @@ const createShell = () => {
       createRedirectionFile(stdoutFile, stdoutMode);
       createRedirectionFile(stderrFile, stderrMode);
       await builtinHandlers.handleCommand(commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode);
+      lastExitCode = 0;
       prompt();
       return;
     }
@@ -127,6 +152,7 @@ const createShell = () => {
 
     if (executablePath === null) {
       writeOutput(`${commandName}: command not found`, stderrFile, stderrMode);
+      lastExitCode = 127;
       prompt();
       return;
     }
@@ -134,7 +160,7 @@ const createShell = () => {
     createRedirectionFile(stdoutFile, stdoutMode);
     createRedirectionFile(stderrFile, stderrMode);
 
-    const child = await executor.runExternalCommand(
+    const result = await executor.runExternalCommand(
       executablePath,
       commandName,
       commandArgs,
@@ -146,6 +172,7 @@ const createShell = () => {
     );
 
     if (isBackground) {
+      const child = result;
       const job = {
         id: jobs.getNextJobId(),
         pid: child.pid,
@@ -159,6 +186,8 @@ const createShell = () => {
 
       jobs.backgroundJobs.push(job);
       console.log(`[${job.id}] ${job.pid}`);
+    } else {
+      lastExitCode = result.exitCode;
     }
 
     prompt();

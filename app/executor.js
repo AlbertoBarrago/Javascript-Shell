@@ -53,11 +53,11 @@ const createExecutor = (builtIns, getBuiltinOutput) => {
         return;
       }
 
-      child.on('error', resolve);
-      child.on('close', () => {
+      child.on('error', () => resolve({ exitCode: 127 }));
+      child.on('close', (code) => {
         closeFileDescriptor(stdout);
         closeFileDescriptor(stderr);
-        resolve();
+        resolve({ exitCode: code ?? 0 });
       });
     });
   };
