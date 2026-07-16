@@ -232,11 +232,18 @@ const printJobs = (stdoutFile, stdoutMode) => {
       : index === previousJobIndex
         ? '-'
         : ' ';
-    lines.push(`[${job.id}]${marker}  ${job.status.padEnd(24, ' ')}${job.command}`);
+    const command = job.status === 'Running' ? `${job.command} &` : job.command;
+    lines.push(`[${job.id}]${marker}  ${job.status.padEnd(24, ' ')}${command}`);
   }
 
   if (lines.length > 0) {
     writeOutput(lines.join('\n'), stdoutFile, stdoutMode);
+  }
+
+  for (let index = backgroundJobs.length - 1; index >= 0; index--) {
+    if (backgroundJobs[index].status === 'Done') {
+      backgroundJobs.splice(index, 1);
+    }
   }
 };
 
@@ -538,12 +545,16 @@ const handleLine = async (command) => {
   );
 
   if (isBackground) {
-      const job = {
-        id: nextJobId,
-        pid: child.pid,
-        command: `${[commandName, ...commandArgs].join(' ')} &`,
-        status: 'Running',
-      };
+    const job = {
+      id: nextJobId,
+      pid: child.pid,
+      command: [commandName, ...commandArgs].join(' '),
+      status: 'Running',
+    };
+
+    child.on('close', () => {
+      job.status = 'Done';
+    });
 
     backgroundJobs.push(job);
     console.log(`[${job.id}] ${job.pid}`);
