@@ -6,6 +6,8 @@ const { spawn, spawnSync } = require("child_process");
 const BUILT_INS = ['type', 'echo', 'cd', 'exit', 'pwd', 'complete', 'jobs'];
 const REDIRECTION_OPERATORS = ['>', '1>', '2>', '>>', '1>>', '2>>'];
 const completionSpecs = new Map();
+const backgroundJobs = [];
+let nextJobId = 1;
 
 // Tracks the previous completion prefix and whether it had multiple matches.
 let previousCompletionPrefix = null;
@@ -262,7 +264,22 @@ const extractRedirection = (commandArgs) => {
   };
 };
 // Run an external command with the given path, name, and arguments
-const runExternalCommand = (commandPath, commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode) => {
+const closeFileDescriptor = (fileDescriptor) => {
+  if (typeof fileDescriptor === 'number') {
+    fs.closeSync(fileDescriptor);
+  }
+};
+
+const runExternalCommand = (
+  commandPath,
+  commandName,
+  commandArgs,
+  stdoutFile,
+  stdoutMode,
+  stderrFile,
+  stderrMode,
+  isBackground,
+) => {
   return new Promise((resolve) => {
     const stdout = stdoutFile === null
       ? 'inherit'
@@ -277,16 +294,17 @@ const runExternalCommand = (commandPath, commandName, commandArgs, stdoutFile, s
       stdio,
     });
 
+    if (isBackground) {
+      closeFileDescriptor(stdout);
+      closeFileDescriptor(stderr);
+      resolve(child);
+      return;
+    }
+
     child.on('error', resolve);
     child.on('close', () => {
-      if (typeof stdout === 'number') {
-        fs.closeSync(stdout);
-      }
-
-      if (typeof stderr === 'number') {
-        fs.closeSync(stderr);
-      }
-
+      closeFileDescriptor(stdout);
+      closeFileDescriptor(stderr);
       resolve();
     });
   });
@@ -440,6 +458,11 @@ const handleLine = async (command) => {
     stderrFile,
     stderrMode,
   } = extractRedirection(args.slice(1));
+  const isBackground = commandArgs[commandArgs.length - 1] === '&';
+
+  if (isBackground) {
+    commandArgs.pop();
+  }
 
   createRedirectionFile(stdoutFile, stdoutMode);
   createRedirectionFile(stderrFile, stderrMode);
@@ -482,7 +505,7 @@ const handleLine = async (command) => {
     return;
   }
 
-  await runExternalCommand(
+  const child = await runExternalCommand(
     executablePath,
     commandName,
     commandArgs,
@@ -490,7 +513,22 @@ const handleLine = async (command) => {
     stdoutMode,
     stderrFile,
     stderrMode,
+    isBackground,
   );
+
+  if (isBackground) {
+    const job = {
+      id: nextJobId,
+      pid: child.pid,
+      command: [commandName, ...commandArgs].join(' '),
+      status: 'Running',
+    };
+
+    backgroundJobs.push(job);
+    console.log(`[${job.id}] ${job.pid}`);
+    nextJobId++;
+  }
+
   prompt();
 };
 // Handle each line of input sequentially.
