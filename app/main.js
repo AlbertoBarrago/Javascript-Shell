@@ -249,9 +249,12 @@ const printJobs = (stdoutFile, stdoutMode) => {
 };
 
 // Print previously executed commands.
-const printHistory = (stdoutFile, stdoutMode) => {
-  const lines = commandHistory.map((command, index) => {
-    return `${String(index + 1).padStart(5, ' ')}  ${command}`;
+const printHistory = (limit, stdoutFile, stdoutMode) => {
+  const startIndex = limit === null
+    ? 0
+    : Math.max(commandHistory.length - limit, 0);
+  const lines = commandHistory.slice(startIndex).map((command, index) => {
+    return `${String(startIndex + index + 1).padStart(5, ' ')}  ${command}`;
   });
 
   if (lines.length > 0) {
@@ -708,7 +711,11 @@ const handleCommand = async (commandName, commandArgs, stdoutFile, stdoutMode, s
       printJobs(stdoutFile, stdoutMode);
       break;
     case 'history':
-      printHistory(stdoutFile, stdoutMode);
+      printHistory(
+        commandArgs[0] === undefined ? null : Number(commandArgs[0]),
+        stdoutFile,
+        stdoutMode,
+      );
       break;
     default:
       writeOutput(`${commandName}: command not found`, stderrFile, stderrMode);
