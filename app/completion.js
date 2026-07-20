@@ -92,16 +92,12 @@ const createCompletion = (builtIns) => {
    * @returns {[string[], string]} The readline completer result tuple.
    */
   const completeFromCandidates = (line, replacementStart, prefix, candidates) => {
-    const matches = candidates
-      .filter((candidate) => candidate.startsWith(prefix))
-      .sort();
+    const matches = candidates.filter((candidate) => candidate.startsWith(prefix)).sort();
     const lineBeforeReplacement = line.slice(0, replacementStart);
 
     if (matches.length === 1) {
       resetCompletionState();
-      const completedToken = matches[0].endsWith('/')
-        ? matches[0]
-        : `${matches[0]} `;
+      const completedToken = matches[0].endsWith('/') ? matches[0] : `${matches[0]} `;
       return [[`${lineBeforeReplacement}${completedToken}`], line];
     }
 
@@ -118,10 +114,7 @@ const createCompletion = (builtIns) => {
       return [[`${lineBeforeReplacement}${commonPrefix}`], line];
     }
 
-    if (
-      previousCompletionPrefix === line
-      && previousCompletionHadMultipleMatches
-    ) {
+    if (previousCompletionPrefix === line && previousCompletionHadMultipleMatches) {
       process.stdout.write(`\n${matches.join('  ')}\n$ ${line}`);
       resetCompletionState();
       return [[], line];
@@ -142,25 +135,20 @@ const createCompletion = (builtIns) => {
    */
   const getFileCompletionCandidates = (prefix) => {
     const lastSlashIndex = prefix.lastIndexOf('/');
-    const directoryPrefix = lastSlashIndex === -1
-      ? ''
-      : prefix.slice(0, lastSlashIndex + 1);
-    const fileNamePrefix = lastSlashIndex === -1
-      ? prefix
-      : prefix.slice(lastSlashIndex + 1);
+    const directoryPrefix = lastSlashIndex === -1 ? '' : prefix.slice(0, lastSlashIndex + 1);
+    const fileNamePrefix = lastSlashIndex === -1 ? prefix : prefix.slice(lastSlashIndex + 1);
     const directoryPath = directoryPrefix === '' ? process.cwd() : directoryPrefix;
 
     try {
-      return fs.readdirSync(directoryPath)
+      return fs
+        .readdirSync(directoryPath)
         .filter((fileName) => fileName.startsWith(fileNamePrefix))
         .map((fileName) => {
           const fullPath = path.join(directoryPath, fileName);
           const completedPath = `${directoryPrefix}${fileName}`;
 
           try {
-            return fs.statSync(fullPath).isDirectory()
-              ? `${completedPath}/`
-              : completedPath;
+            return fs.statSync(fullPath).isDirectory() ? `${completedPath}/` : completedPath;
           } catch {
             return completedPath;
           }
@@ -226,7 +214,12 @@ const createCompletion = (builtIns) => {
     const prefix = line.slice(lastSpaceIndex + 1);
     const words = line.split(' ');
     const previousWord = words.length >= 2 ? words[words.length - 2] : '';
-    const registeredCandidates = getRegisteredCompletionCandidates(commandName, prefix, previousWord, line);
+    const registeredCandidates = getRegisteredCompletionCandidates(
+      commandName,
+      prefix,
+      previousWord,
+      line,
+    );
 
     if (registeredCandidates !== null) {
       return completeFromCandidates(line, lastSpaceIndex + 1, prefix, registeredCandidates);
@@ -244,6 +237,4 @@ const createCompletion = (builtIns) => {
   };
 };
 
-export {
-  createCompletion,
-};
+export { createCompletion };

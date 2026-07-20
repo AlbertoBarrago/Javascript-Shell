@@ -90,24 +90,26 @@ const parseCommandLine = (command) => {
 };
 
 /**
+ * A single redirection target: the destination file and the write mode.
+ *
+ * @typedef {{ file: string, mode: 'write'|'append' }} RedirectionTarget
+ */
+
+/**
  * Split redirection operators and their target files out of a token list.
+ * Multiple redirections to the same stream are all preserved (tee-style
+ * multiwrite), so `echo x > a > b` yields two stdout targets.
  *
  * @param {string[]} commandArgs - Tokens following the command name.
  * @returns {{
  *   args: string[],
- *   stdoutFile: string|null,
- *   stdoutMode: 'write'|'append',
- *   stderrFile: string|null,
- *   stderrMode: 'write'|'append'
- * }} The remaining arguments and the resolved redirection targets.
+ *   stdoutTargets: RedirectionTarget[],
+ *   stderrTargets: RedirectionTarget[]
+ * }} The remaining arguments and the collected redirection targets.
  */
 const extractRedirection = (commandArgs) => {
-  const redirections = {
-    stdoutFile: null,
-    stdoutMode: 'write',
-    stderrFile: null,
-    stderrMode: 'write',
-  };
+  const stdoutTargets = [];
+  const stderrTargets = [];
   const args = [];
 
   for (let index = 0; index < commandArgs.length; index++) {
@@ -115,14 +117,17 @@ const extractRedirection = (commandArgs) => {
 
     if (REDIRECTION_OPERATORS.includes(arg)) {
       const targetFile = commandArgs[index + 1] || null;
-      const outputMode = arg.endsWith('>>') ? 'append' : 'write';
+      const mode = arg.endsWith('>>') ? 'append' : 'write';
 
-      if (arg === '2>' || arg === '2>>') {
-        redirections.stderrFile = targetFile;
-        redirections.stderrMode = outputMode;
-      } else {
-        redirections.stdoutFile = targetFile;
-        redirections.stdoutMode = outputMode;
+      // Skip a dangling operator with no target file (e.g. trailing `>`).
+      if (targetFile !== null) {
+        const target = { file: targetFile, mode };
+
+        if (arg === '2>' || arg === '2>>') {
+          stderrTargets.push(target);
+        } else {
+          stdoutTargets.push(target);
+        }
       }
 
       index++;
@@ -134,7 +139,8 @@ const extractRedirection = (commandArgs) => {
 
   return {
     args,
-    ...redirections,
+    stdoutTargets,
+    stderrTargets,
   };
 };
 
@@ -169,8 +175,4 @@ const splitPipeline = (args) => {
   return commands;
 };
 
-export {
-  extractRedirection,
-  parseCommandLine,
-  splitPipeline,
-};
+export { extractRedirection, parseCommandLine, splitPipeline };

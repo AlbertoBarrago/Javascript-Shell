@@ -75,7 +75,7 @@ const createBuiltins = ({
         return `${commandArgs.join(' ')}\n`;
       case 'pwd':
         return `${process.cwd()}\n`;
-      case 'type':
+      case 'type': {
         if (commandArgs.length === 0) {
           return 'type: missing operand\n';
         }
@@ -88,6 +88,7 @@ const createBuiltins = ({
         return executablePath === null
           ? `${commandArgs[0]}: not found\n`
           : `${commandArgs[0]} is ${executablePath}\n`;
+      }
       default:
         return '';
     }
@@ -98,20 +99,18 @@ const createBuiltins = ({
    *
    * @param {string} commandName - The builtin name.
    * @param {string[]} commandArgs - The builtin arguments.
-   * @param {string|null} stdoutFile - stdout redirection target, or `null`.
-   * @param {'write'|'append'} stdoutMode - stdout redirection mode.
-   * @param {string|null} stderrFile - stderr redirection target, or `null`.
-   * @param {'write'|'append'} stderrMode - stderr redirection mode.
+   * @param {import('./parser.js').RedirectionTarget[]} stdoutTargets - stdout targets.
+   * @param {import('./parser.js').RedirectionTarget[]} stderrTargets - stderr targets.
    * @returns {Promise<void>}
    */
-  const handleCommand = async (commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode) => {
+  const handleCommand = async (commandName, commandArgs, stdoutTargets, stderrTargets) => {
     if (commandName !== 'exit') {
       exitWarningShown = false;
     }
 
     switch (commandName) {
       case 'echo':
-        writeOutput(commandArgs.join(' '), stdoutFile, stdoutMode);
+        writeOutput(commandArgs.join(' '), stdoutTargets);
         break;
       case 'cd': {
         if (commandArgs.length === 0) {
@@ -138,9 +137,7 @@ const createBuiltins = ({
           break;
         }
 
-        const targetDirectory = requestedDirectory === '~'
-          ? process.env.HOME
-          : requestedDirectory;
+        const targetDirectory = requestedDirectory === '~' ? process.env.HOME : requestedDirectory;
 
         if (!changeDirectory(targetDirectory)) {
           console.log(`cd: ${requestedDirectory}: No such file or directory`);
@@ -149,7 +146,7 @@ const createBuiltins = ({
         break;
       }
       case 'pwd':
-        writeOutput(process.cwd(), stdoutFile, stdoutMode);
+        writeOutput(process.cwd(), stdoutTargets);
         break;
       case 'exit': {
         const hasRunningJobs = backgroundJobs.some((job) => job.status === 'Running');
@@ -165,7 +162,11 @@ const createBuiltins = ({
         break;
       }
       case 'complete':
-        if (commandArgs[0] === '-C' && commandArgs[1] !== undefined && commandArgs[2] !== undefined) {
+        if (
+          commandArgs[0] === '-C' &&
+          commandArgs[1] !== undefined &&
+          commandArgs[2] !== undefined
+        ) {
           completionSpecs.set(commandArgs[2], commandArgs[1]);
         } else if (commandArgs[0] === '-r' && commandArgs[1] !== undefined) {
           completionSpecs.delete(commandArgs[1]);
@@ -173,23 +174,15 @@ const createBuiltins = ({
           const completerPath = completionSpecs.get(commandArgs[1]);
 
           if (completerPath !== undefined) {
-            writeOutput(
-              `complete -C '${completerPath}' ${commandArgs[1]}`,
-              stdoutFile,
-              stdoutMode,
-            );
+            writeOutput(`complete -C '${completerPath}' ${commandArgs[1]}`, stdoutTargets);
           } else {
-            writeOutput(
-              `complete: ${commandArgs[1]}: no completion specification`,
-              stderrFile,
-              stderrMode,
-            );
+            writeOutput(`complete: ${commandArgs[1]}: no completion specification`, stderrTargets);
           }
         }
         break;
       case 'jobs':
         await waitForBackgroundJobEvents();
-        printJobs(stdoutFile, stdoutMode);
+        printJobs(stdoutTargets);
         break;
       case 'history':
         if (commandArgs[0] === '-r' && commandArgs[1] !== undefined) {
@@ -201,8 +194,7 @@ const createBuiltins = ({
         } else {
           printHistory(
             commandArgs[0] === undefined ? null : Number(commandArgs[0]),
-            stdoutFile,
-            stdoutMode,
+            stdoutTargets,
             writeOutput,
           );
         }
@@ -212,17 +204,17 @@ const createBuiltins = ({
           const variableValue = shellVariables.get(commandArgs[1]);
 
           if (variableValue === undefined) {
-            writeOutput(`declare: ${commandArgs[1]}: not found`, stderrFile, stderrMode);
+            writeOutput(`declare: ${commandArgs[1]}: not found`, stderrTargets);
           } else {
-            writeOutput(`declare -- ${commandArgs[1]}="${variableValue}"`, stdoutFile, stdoutMode);
+            writeOutput(`declare -- ${commandArgs[1]}="${variableValue}"`, stdoutTargets);
           }
-        } else if (commandArgs[0] !== undefined && commandArgs[0].includes('=')) {
+        } else if (commandArgs[0]?.includes('=')) {
           const separatorIndex = commandArgs[0].indexOf('=');
           const variableName = commandArgs[0].slice(0, separatorIndex);
           const variableValue = commandArgs[0].slice(separatorIndex + 1);
 
           if (!isValidShellIdentifier(variableName)) {
-            writeOutput(`declare: \`${commandArgs[0]}': not a valid identifier`, stderrFile, stderrMode);
+            writeOutput(`declare: \`${commandArgs[0]}': not a valid identifier`, stderrTargets);
             break;
           }
 
@@ -230,7 +222,7 @@ const createBuiltins = ({
         }
         break;
       default:
-        writeOutput(`${commandName}: command not found`, stderrFile, stderrMode);
+        writeOutput(`${commandName}: command not found`, stderrTargets);
     }
   };
 
@@ -240,6 +232,4 @@ const createBuiltins = ({
   };
 };
 
-export {
-  createBuiltins,
-};
+export { createBuiltins };

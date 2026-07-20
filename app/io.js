@@ -1,35 +1,37 @@
 import fs from 'node:fs';
 
 /**
- * Write a message to stdout or to a redirection target file.
+ * Write a message to stdout, or fan it out to one or more redirection targets
+ * (tee-style multiwrite).
  *
  * @param {string} message - The message (a trailing newline is added).
- * @param {string|null} outputFile - Target file, or `null` for stdout.
- * @param {'write'|'append'} [outputMode='write'] - File write mode.
+ * @param {import('./parser.js').RedirectionTarget[]} [targets=[]] - Target
+ *   files; when empty the message goes to stdout.
  * @returns {void}
  */
-const writeOutput = (message, outputFile, outputMode = 'write') => {
-  if (outputFile === null) {
+const writeOutput = (message, targets = []) => {
+  if (targets.length === 0) {
     console.log(message);
     return;
   }
 
-  fs.writeFileSync(outputFile, `${message}\n`, {
-    flag: outputMode === 'append' ? 'a' : 'w',
-  });
+  for (const { file, mode } of targets) {
+    fs.writeFileSync(file, `${message}\n`, {
+      flag: mode === 'append' ? 'a' : 'w',
+    });
+  }
 };
 
 /**
- * Create (or truncate) a redirection target file so it exists even if the
+ * Create (or truncate) each redirection target file so it exists even if the
  * command produces no output.
  *
- * @param {string|null} filePath - Target file, or `null` to do nothing.
- * @param {'write'|'append'} outputMode - File open mode.
+ * @param {import('./parser.js').RedirectionTarget[]} [targets=[]] - Targets.
  * @returns {void}
  */
-const createRedirectionFile = (filePath, outputMode) => {
-  if (filePath !== null) {
-    fs.closeSync(fs.openSync(filePath, outputMode === 'append' ? 'a' : 'w'));
+const createRedirectionFile = (targets = []) => {
+  for (const { file, mode } of targets) {
+    fs.closeSync(fs.openSync(file, mode === 'append' ? 'a' : 'w'));
   }
 };
 
@@ -45,8 +47,4 @@ const closeFileDescriptor = (fileDescriptor) => {
   }
 };
 
-export {
-  closeFileDescriptor,
-  createRedirectionFile,
-  writeOutput,
-};
+export { closeFileDescriptor, createRedirectionFile, writeOutput };

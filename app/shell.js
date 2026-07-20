@@ -1,15 +1,15 @@
 import readline from 'node:readline';
 
 import { createBuiltins } from './builtins.js';
+import { colorize, stripAnsi, supportsColor } from './colors.js';
 import { createCompletion } from './completion.js';
 import { BUILT_INS } from './constants.js';
 import { createExecutor } from './executor.js';
 import { createHistory } from './history.js';
-import { createJobs } from './jobs.js';
 import { createRedirectionFile, writeOutput } from './io.js';
+import { createJobs } from './jobs.js';
 import { extractRedirection, parseCommandLine, splitPipeline } from './parser.js';
 import { createVariables } from './variables.js';
-import { colorize, stripAnsi, supportsColor } from './colors.js';
 
 /**
  * Create the shell: instantiate every subsystem, wire them together and expose
@@ -79,7 +79,7 @@ const createShell = () => {
 
   const prompt = () => {
     if (!isReadlineClosed) {
-      jobs.reapDoneJobs(null, 'write');
+      jobs.reapDoneJobs();
       rl.setPrompt(buildPrompt());
       rl.prompt();
     }
@@ -136,29 +136,27 @@ const createShell = () => {
    * external executable (with its path), or not found.
    *
    * @param {string[]} commandArgs - Arguments to `type`.
-   * @param {string|null} stdoutFile - stdout redirection target, or `null`.
-   * @param {'write'|'append'} stdoutMode - stdout redirection mode.
-   * @param {string|null} stderrFile - stderr redirection target, or `null`.
-   * @param {'write'|'append'} stderrMode - stderr redirection mode.
+   * @param {import('./parser.js').RedirectionTarget[]} stdoutTargets - stdout targets.
+   * @param {import('./parser.js').RedirectionTarget[]} stderrTargets - stderr targets.
    * @returns {void}
    */
-  const handleType = (commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode) => {
+  const handleType = (commandArgs, stdoutTargets, stderrTargets) => {
     if (commandArgs.length === 0) {
       console.log('type: missing operand');
       return;
     }
 
     if (BUILT_INS.includes(commandArgs[0])) {
-      writeOutput(`${commandArgs[0]} is a shell builtin`, stdoutFile, stdoutMode);
+      writeOutput(`${commandArgs[0]} is a shell builtin`, stdoutTargets);
       return;
     }
 
     const executablePath = executor.findExecutable(commandArgs[0]);
 
     if (executablePath === null) {
-      writeOutput(`${commandArgs[0]}: not found`, stderrFile, stderrMode);
+      writeOutput(`${commandArgs[0]}: not found`, stderrTargets);
     } else {
-      writeOutput(`${commandArgs[0]} is ${executablePath}`, stdoutFile, stdoutMode);
+      writeOutput(`${commandArgs[0]} is ${executablePath}`, stdoutTargets);
     }
   };
 
@@ -192,13 +190,7 @@ const createShell = () => {
     }
 
     const commandName = args[0];
-    const {
-      args: commandArgs,
-      stdoutFile,
-      stdoutMode,
-      stderrFile,
-      stderrMode,
-    } = extractRedirection(args.slice(1));
+    const { args: commandArgs, stdoutTargets, stderrTargets } = extractRedirection(args.slice(1));
     const isBackground = commandArgs[commandArgs.length - 1] === '&';
 
     if (isBackground) {
@@ -206,15 +198,15 @@ const createShell = () => {
     }
 
     if (commandName === 'type') {
-      handleType(commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode);
+      handleType(commandArgs, stdoutTargets, stderrTargets);
       prompt();
       return;
     }
 
     if (BUILT_INS.includes(commandName)) {
-      createRedirectionFile(stdoutFile, stdoutMode);
-      createRedirectionFile(stderrFile, stderrMode);
-      await builtinHandlers.handleCommand(commandName, commandArgs, stdoutFile, stdoutMode, stderrFile, stderrMode);
+      createRedirectionFile(stdoutTargets);
+      createRedirectionFile(stderrTargets);
+      await builtinHandlers.handleCommand(commandName, commandArgs, stdoutTargets, stderrTargets);
       lastExitCode = 0;
       prompt();
       return;
@@ -223,23 +215,21 @@ const createShell = () => {
     const executablePath = executor.findExecutable(commandName);
 
     if (executablePath === null) {
-      writeOutput(`${commandName}: command not found`, stderrFile, stderrMode);
+      writeOutput(`${commandName}: command not found`, stderrTargets);
       lastExitCode = 127;
       prompt();
       return;
     }
 
-    createRedirectionFile(stdoutFile, stdoutMode);
-    createRedirectionFile(stderrFile, stderrMode);
+    createRedirectionFile(stdoutTargets);
+    createRedirectionFile(stderrTargets);
 
     const result = await executor.runExternalCommand(
       executablePath,
       commandName,
       commandArgs,
-      stdoutFile,
-      stdoutMode,
-      stderrFile,
-      stderrMode,
+      stdoutTargets,
+      stderrTargets,
       isBackground,
     );
 

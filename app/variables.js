@@ -49,6 +49,4 @@ const createVariables = () => {
   };
 };
 
-export {
-  createVariables,
-};
+export { createVariables };

@@ -47,10 +47,8 @@ const createExecutor = (builtIns, getBuiltinOutput) => {
    * @param {string} commandPath - Absolute path to the executable.
    * @param {string} commandName - Name to expose as argv0.
    * @param {string[]} commandArgs - Arguments passed to the command.
-   * @param {string|null} stdoutFile - stdout redirection target, or `null`.
-   * @param {'write'|'append'} stdoutMode - stdout redirection mode.
-   * @param {string|null} stderrFile - stderr redirection target, or `null`.
-   * @param {'write'|'append'} stderrMode - stderr redirection mode.
+   * @param {import('./parser.js').RedirectionTarget[]} stdoutTargets - stdout targets.
+   * @param {import('./parser.js').RedirectionTarget[]} stderrTargets - stderr targets.
    * @param {boolean} isBackground - Whether to run detached in the background.
    * @returns {Promise<import('node:child_process').ChildProcess|{exitCode: number}>}
    *   The child process when backgrounded, otherwise the foreground exit code.
@@ -59,37 +57,86 @@ const createExecutor = (builtIns, getBuiltinOutput) => {
     commandPath,
     commandName,
     commandArgs,
-    stdoutFile,
-    stdoutMode,
-    stderrFile,
-    stderrMode,
+    stdoutTargets,
+    stderrTargets,
     isBackground,
   ) => {
     return new Promise((resolve) => {
-      const stdout = stdoutFile === null
-        ? 'inherit'
-        : fs.openSync(stdoutFile, stdoutMode === 'append' ? 'a' : 'w');
-      const stderr = stderrFile === null
-        ? 'inherit'
-        : fs.openSync(stderrFile, stderrMode === 'append' ? 'a' : 'w');
-      const stdio = ['inherit', stdout, stderr];
+      // Prepare a stream's stdio value. With no target it inherits the parent
+      // stream; with a single target it maps to a direct fd (zero-copy); with
+      // several targets it becomes a pipe so we can fan the output out to every
+      // file (tee-style multiwrite).
+      const prepareStream = (targets, inherited) => {
+        if (targets.length === 0) {
+          return { stdio: inherited, fds: [], pipe: false };
+        }
+
+        const fds = targets.map(({ file, mode }) =>
+          fs.openSync(file, mode === 'append' ? 'a' : 'w'),
+        );
+
+        if (fds.length === 1) {
+          return { stdio: fds[0], fds, pipe: false };
+        }
+
+        return { stdio: 'pipe', fds, pipe: true };
+      };
+
+      const stdout = prepareStream(stdoutTargets, 'inherit');
+      const stderr = prepareStream(stderrTargets, 'inherit');
+      const stdio = ['inherit', stdout.stdio, stderr.stdio];
 
       const child = spawn(commandPath, commandArgs, {
         argv0: commandName,
         stdio,
       });
 
+      // Fan a piped child stream out to each of its target descriptors.
+      const fanOut = (stream, fds) => {
+        if (stream === null) {
+          return;
+        }
+
+        stream.on('data', (chunk) => {
+          for (const fd of fds) {
+            fs.writeSync(fd, chunk);
+          }
+        });
+      };
+
+      if (stdout.pipe) {
+        fanOut(child.stdout, stdout.fds);
+      }
+
+      if (stderr.pipe) {
+        fanOut(child.stderr, stderr.fds);
+      }
+
+      // Direct fds are owned by the child and can be released by the parent as
+      // soon as it has been spawned. Fan-out fds are written to by the parent,
+      // so they must stay open until the child's output stream ends.
+      const directFds = [...(stdout.pipe ? [] : stdout.fds), ...(stderr.pipe ? [] : stderr.fds)];
+      const fanOutFds = [...(stdout.pipe ? stdout.fds : []), ...(stderr.pipe ? stderr.fds : [])];
+
+      const closeFds = (fds) => {
+        for (const fd of fds) {
+          closeFileDescriptor(fd);
+        }
+      };
+
       if (isBackground) {
-        closeFileDescriptor(stdout);
-        closeFileDescriptor(stderr);
+        closeFds(directFds);
+        child.on('close', () => closeFds(fanOutFds));
         resolve(child);
         return;
       }
 
-      child.on('error', () => resolve({ exitCode: 127 }));
+      child.on('error', () => {
+        closeFds([...directFds, ...fanOutFds]);
+        resolve({ exitCode: 127 });
+      });
       child.on('close', (code) => {
-        closeFileDescriptor(stdout);
-        closeFileDescriptor(stderr);
+        closeFds([...directFds, ...fanOutFds]);
         resolve({ exitCode: code ?? 0 });
       });
     });
@@ -177,11 +224,7 @@ const createExecutor = (builtIns, getBuiltinOutput) => {
 
         return spawn(commandPaths[index], command.slice(1), {
           argv0: command[0],
-          stdio: [
-            isFirst ? 'inherit' : 'pipe',
-            isLast ? 'inherit' : 'pipe',
-            'inherit',
-          ],
+          stdio: [isFirst ? 'inherit' : 'pipe', isLast ? 'inherit' : 'pipe', 'inherit'],
         });
       });
 
@@ -221,28 +264,23 @@ const createExecutor = (builtIns, getBuiltinOutput) => {
    * @param {string[][]} commands - One token array per pipeline stage.
    * @returns {Promise<void>} Resolves when the pipeline completes.
    */
-  const runPipeline = (commands) => {
-    return new Promise(async (resolve) => {
-      const hasBuiltin = commands.some((command) => builtIns.includes(command[0]));
+  const runPipeline = async (commands) => {
+    const hasBuiltin = commands.some((command) => builtIns.includes(command[0]));
 
-      if (!hasBuiltin) {
-        await runExternalPipeline(commands);
-        resolve();
-        return;
-      }
+    if (!hasBuiltin) {
+      await runExternalPipeline(commands);
+      return;
+    }
 
-      let output = '';
+    let output = '';
 
-      for (const command of commands) {
-        output = await collectCommandOutput(command, output);
-      }
+    for (const command of commands) {
+      output = await collectCommandOutput(command, output);
+    }
 
-      if (output !== '') {
-        process.stdout.write(output);
-      }
-
-      resolve();
-    });
+    if (output !== '') {
+      process.stdout.write(output);
+    }
   };
 
   return {
@@ -252,6 +290,4 @@ const createExecutor = (builtIns, getBuiltinOutput) => {
   };
 };
 
-export {
-  createExecutor,
-};
+export { createExecutor };

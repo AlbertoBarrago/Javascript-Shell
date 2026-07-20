@@ -14,21 +14,18 @@ const createHistory = () => {
    *
    * @param {number|null} limit - Show only the last `limit` entries, or all
    *   when `null`.
-   * @param {string|null} stdoutFile - stdout redirection target, or `null`.
-   * @param {'write'|'append'} stdoutMode - stdout redirection mode.
+   * @param {import('./parser.js').RedirectionTarget[]} stdoutTargets - stdout targets.
    * @param {Function} writeOutput - Output writer.
    * @returns {void}
    */
-  const printHistory = (limit, stdoutFile, stdoutMode, writeOutput) => {
-    const startIndex = limit === null
-      ? 0
-      : Math.max(commandHistory.length - limit, 0);
+  const printHistory = (limit, stdoutTargets, writeOutput) => {
+    const startIndex = limit === null ? 0 : Math.max(commandHistory.length - limit, 0);
     const lines = commandHistory.slice(startIndex).map((command, index) => {
       return `${String(startIndex + index + 1).padStart(5, ' ')}  ${command}`;
     });
 
     if (lines.length > 0) {
-      writeOutput(lines.join('\n'), stdoutFile, stdoutMode);
+      writeOutput(lines.join('\n'), stdoutTargets);
     }
   };
 
@@ -40,9 +37,7 @@ const createHistory = () => {
    */
   const readHistoryFile = (historyFilePath) => {
     const fileContent = fs.readFileSync(historyFilePath, 'utf8');
-    const commands = fileContent
-      .split(/\r?\n/)
-      .filter((command) => command !== '');
+    const commands = fileContent.split(/\r?\n/).filter((command) => command !== '');
 
     commandHistory.push(...commands);
   };
@@ -114,6 +109,4 @@ const createHistory = () => {
   };
 };
 
-export {
-  createHistory,
-};
+export { createHistory };

@@ -23,27 +23,22 @@ const createJobs = (writeOutput) => {
   /**
    * Print all tracked jobs, then reap the finished ones.
    *
-   * @param {string|null} stdoutFile - stdout redirection target, or `null`.
-   * @param {'write'|'append'} stdoutMode - stdout redirection mode.
+   * @param {import('./parser.js').RedirectionTarget[]} [stdoutTargets] - stdout targets.
    * @returns {void}
    */
-  const printJobs = (stdoutFile, stdoutMode) => {
+  const printJobs = (stdoutTargets) => {
     const mostRecentJobIndex = backgroundJobs.length - 1;
     const previousJobIndex = backgroundJobs.length - 2;
     const lines = [];
 
     for (const [index, job] of backgroundJobs.entries()) {
-      const marker = index === mostRecentJobIndex
-        ? '+'
-        : index === previousJobIndex
-          ? '-'
-          : ' ';
+      const marker = index === mostRecentJobIndex ? '+' : index === previousJobIndex ? '-' : ' ';
       const command = job.status === 'Running' ? `${job.command} &` : job.command;
       lines.push(`[${job.id}]${marker}  ${job.status.padEnd(24, ' ')}${command}`);
     }
 
     if (lines.length > 0) {
-      writeOutput(lines.join('\n'), stdoutFile, stdoutMode);
+      writeOutput(lines.join('\n'), stdoutTargets);
     }
 
     for (let index = backgroundJobs.length - 1; index >= 0; index--) {
@@ -56,11 +51,10 @@ const createJobs = (writeOutput) => {
   /**
    * Report and remove jobs that have finished since the last check.
    *
-   * @param {string|null} stdoutFile - stdout redirection target, or `null`.
-   * @param {'write'|'append'} stdoutMode - stdout redirection mode.
+   * @param {import('./parser.js').RedirectionTarget[]} [stdoutTargets] - stdout targets.
    * @returns {void}
    */
-  const reapDoneJobs = (stdoutFile, stdoutMode) => {
+  const reapDoneJobs = (stdoutTargets) => {
     const mostRecentJobIndex = backgroundJobs.length - 1;
     const previousJobIndex = backgroundJobs.length - 2;
     const lines = [];
@@ -70,16 +64,12 @@ const createJobs = (writeOutput) => {
         continue;
       }
 
-      const marker = index === mostRecentJobIndex
-        ? '+'
-        : index === previousJobIndex
-          ? '-'
-          : ' ';
+      const marker = index === mostRecentJobIndex ? '+' : index === previousJobIndex ? '-' : ' ';
       lines.push(`[${job.id}]${marker}  ${job.status.padEnd(24, ' ')}${job.command}`);
     }
 
     if (lines.length > 0) {
-      writeOutput(lines.join('\n'), stdoutFile, stdoutMode);
+      writeOutput(lines.join('\n'), stdoutTargets);
     }
 
     for (let index = backgroundJobs.length - 1; index >= 0; index--) {
@@ -110,6 +100,4 @@ const createJobs = (writeOutput) => {
   };
 };
 
-export {
-  createJobs,
-};
+export { createJobs };

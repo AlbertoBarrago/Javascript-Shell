@@ -34,7 +34,7 @@ const supportsColor = (stream = process.stdout) => {
     return false;
   }
 
-  return Boolean(stream && stream.isTTY);
+  return Boolean(stream?.isTTY);
 };
 
 /**
@@ -62,12 +62,8 @@ const colorize = (text, colorName, enabled = supportsColor()) => {
  * @returns {string} The text without ANSI SGR sequences.
  */
 const stripAnsi = (text) => {
-  // eslint-disable-next-line no-control-regex
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: ESC (0x1b) is required to match ANSI SGR sequences
   return text.replace(/\x1b\[[0-9;]*m/g, '');
 };
 
-export {
-  colorize,
-  stripAnsi,
-  supportsColor,
-};
+export { colorize, stripAnsi, supportsColor };
