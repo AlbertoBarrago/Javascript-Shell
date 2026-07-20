@@ -18,6 +18,7 @@ A small POSIX-style shell built in JavaScript as a study project.
 - Backslash escaping
 - Standard output and error redirection
 - Append redirection
+- Tee-style multiwrite redirection: `echo x > a > b` writes to every listed target
 - Pipelines
 - Background jobs
 - Tab completion for commands, files, and registered completion handlers
